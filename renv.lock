@@ -913,9 +913,9 @@
       "RemoteHost": "api.github.com",
       "RemoteRepo": "tidygeocoder",
       "RemoteUsername": "OUCRU-Modelling",
-      "RemotePkgRef": "https://github.com/OUCRU-Modelling/tidygeocoder.git",
-      "RemoteRef": "HEAD",
-      "RemoteSha": "638a176b929ba65d59c692ea7bc29d68023de900",
+      "RemotePkgRef": "OUCRU-Modelling/tidygeocoder@vietmap",
+      "RemoteRef": "vietmap",
+      "RemoteSha": "6bcb860f0e5f30ab883a811185af7d22a0d611f5",
       "NeedsCompilation": "no",
       "Author": "Jesse Cambon [aut, cre] (ORCID: <https://orcid.org/0000-0001-6854-1514>), Diego Hernangómez [aut] (ORCID: <https://orcid.org/0000-0001-8457-4658>), Christopher Belanger [aut] (ORCID: <https://orcid.org/0000-0003-2070-5721>), Daniel Possenriede [aut] (ORCID: <https://orcid.org/0000-0002-6738-9845>), Otto Hansen [ctb] (ORCID: <https://orcid.org/0000-0002-4618-5667>)",
       "Maintainer": "Jesse Cambon <jesse.cambon@gmail.com>"

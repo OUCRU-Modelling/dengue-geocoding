@@ -1,6 +1,7 @@
 library(targets)
 
 tar_source("R/target_fns")
+tar_option_set(packages = c("tidyverse"))
 
 list(
   tar_target(

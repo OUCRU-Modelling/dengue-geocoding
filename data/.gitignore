@@ -1,3 +1,5 @@
 *.xls
 *.xlsx
 *.csv
+cached/*
+/.DS_store

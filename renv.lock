@@ -1154,7 +1154,7 @@
       "NeedsCompilation": "no",
       "Author": "Hadley Wickham [aut, cre], Maximilian Girlich [aut], Edgar Ruiz [aut], Posit Software, PBC [cph, fnd]",
       "Maintainer": "Hadley Wickham <hadley@posit.co>",
-      "Repository": "https://packagemanager.posit.co/cran/latest"
+      "Repository": "CRAN"
     },
     "digest": {
       "Package": "digest",
@@ -1289,7 +1289,7 @@
       "NeedsCompilation": "no",
       "Author": "Hadley Wickham [cre, aut], Maximilian Girlich [aut], Mark Fairbanks [aut], Ryan Dickerson [aut], Posit Software, PBC [cph, fnd]",
       "Maintainer": "Hadley Wickham <hadley@posit.co>",
-      "Repository": "https://packagemanager.posit.co/cran/latest"
+      "Repository": "CRAN"
     },
     "e1071": {
       "Package": "e1071",
@@ -1767,7 +1767,7 @@
       "NeedsCompilation": "no",
       "Author": "Lucy D'Agostino McGowan [aut], Jennifer Bryan [aut, cre] (ORCID: <https://orcid.org/0000-0002-6983-2759>), Posit Software, PBC [cph, fnd]",
       "Maintainer": "Jennifer Bryan <jenny@posit.co>",
-      "Repository": "https://packagemanager.posit.co/cran/latest"
+      "Repository": "CRAN"
     },
     "googlesheets4": {
       "Package": "googlesheets4",
@@ -2527,7 +2527,7 @@
       "NeedsCompilation": "yes",
       "Author": "Stefan Milton Bache [aut, cph] (Original author and creator of magrittr), Hadley Wickham [aut], Lionel Henry [cre], Posit Software, PBC [cph, fnd] (ROR: <https://ror.org/03wc8by49>)",
       "Maintainer": "Lionel Henry <lionel@posit.co>",
-      "Repository": "https://packagemanager.posit.co/cran/latest"
+      "Repository": "CRAN"
     },
     "memoise": {
       "Package": "memoise",
@@ -2707,7 +2707,7 @@
       "NeedsCompilation": "no",
       "Author": "Kirill Müller [aut, cre] (ORCID: <https://orcid.org/0000-0002-1416-3412>), Hadley Wickham [aut], RStudio [cph]",
       "Maintainer": "Kirill Müller <kirill@cynkra.com>",
-      "Repository": "https://packagemanager.posit.co/cran/latest"
+      "Repository": "CRAN"
     },
     "pkgconfig": {
       "Package": "pkgconfig",
@@ -4143,15 +4143,16 @@
       "Roxygen": "list(markdown = TRUE)",
       "RoxygenNote": "7.3.2",
       "Language": "en-US",
-      "Author": "Jesse Cambon [aut, cre] (ORCID: <https://orcid.org/0000-0001-6854-1514>), Diego Hernangómez [aut] (ORCID: <https://orcid.org/0000-0001-8457-4658>), Christopher Belanger [aut] (ORCID: <https://orcid.org/0000-0003-2070-5721>), Daniel Possenriede [aut] (ORCID: <https://orcid.org/0000-0002-6738-9845>), Otto Hansen [ctb] (ORCID: <https://orcid.org/0000-0002-4618-5667>)",
-      "Maintainer": "Jesse Cambon <jesse.cambon@gmail.com>",
       "RemoteType": "github",
       "RemoteHost": "api.github.com",
       "RemoteRepo": "tidygeocoder",
       "RemoteUsername": "OUCRU-Modelling",
       "RemotePkgRef": "OUCRU-Modelling/tidygeocoder@vietmap",
       "RemoteRef": "vietmap",
-      "RemoteSha": "6bcb860f0e5f30ab883a811185af7d22a0d611f5"
+      "RemoteSha": "6bcb860f0e5f30ab883a811185af7d22a0d611f5",
+      "NeedsCompilation": "no",
+      "Author": "Jesse Cambon [aut, cre] (ORCID: <https://orcid.org/0000-0001-6854-1514>), Diego Hernangómez [aut] (ORCID: <https://orcid.org/0000-0001-8457-4658>), Christopher Belanger [aut] (ORCID: <https://orcid.org/0000-0003-2070-5721>), Daniel Possenriede [aut] (ORCID: <https://orcid.org/0000-0002-6738-9845>), Otto Hansen [ctb] (ORCID: <https://orcid.org/0000-0002-4618-5667>)",
+      "Maintainer": "Jesse Cambon <jesse.cambon@gmail.com>"
     },
     "tidyr": {
       "Package": "tidyr",

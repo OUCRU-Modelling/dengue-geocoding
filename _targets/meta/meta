@@ -1,6 +1,9 @@
 name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
-raw_data|stem|38a57dd57ad287d5|9509649862d1bfaf|2c530c1562a7fbd1|-1101284392||t20480.4818565878s|s113b|113|qs|local|vector|||0.001||
 xlsx_2000_2016|stem|38a57dd57ad287d5|9509649862d1bfaf|2c530c1562a7fbd1|608990252||t20480.489493648s|s113b|113|qs|local|vector|||0||
-.Random.seed|object|4c44345af028e69b
+raw_data|stem|55ff5c07e2039f84|075677822b89d945|307ac2b4680ba7e1|-1101284392||t20481.4750178524s|s4613289b|4613289|rds|local|vector|||3.129||
+clean_data|stem|34868e705f75f276|e79791ea25c0f221|30e62413a5d2ec3f|-259385813||t20481.4776477598s|s8052362b|8052362|rds|local|vector|||0.962||
+.Random.seed|object|184445fcdfa35e35
+get_addr|function|eec7bd5800fd3425
+clean_xlsx|function|f9a33c6cfbf70100
 ingest_xlsx|function|071b8c8f80c560e6
-clean_data|stem|55ff5c07e2039f84|075677822b89d945|307ac2b4680ba7e1|-259385813||t20480.4952465645s|s4613289b|4613289|rds|local|vector|||3.121||
+clean_addr|stem|3ce4aff30ff2f397|1b70124e3c231412|1233eeb9dca65705|1617414505||t20481.4824815387s|s1693523b|1693523|rds|local|vector|||0.01||

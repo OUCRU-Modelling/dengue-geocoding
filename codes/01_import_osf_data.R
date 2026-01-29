@@ -24,12 +24,14 @@ hcmc_highway <- hcmc_bb %>%
   osmdata_sf()
 
 hcmc_highway <- hcmc_highway %>%
-  imap(~ if ("sf" %in% class(.x)) {
-    .x %>%
-      st_transform(kmproj)
-  } else {
-    .x
-  })
+  imap(
+    ~ if ("sf" %in% class(.x)) {
+      .x %>%
+        st_transform(kmproj)
+    } else {
+      .x
+    }
+  )
 
 
 # SaveRDS

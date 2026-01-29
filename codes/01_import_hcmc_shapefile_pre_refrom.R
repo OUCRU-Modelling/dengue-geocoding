@@ -5,8 +5,9 @@ source("codes/00_packages.R", verbose = T)
 # Shapefile ---------------------------------------------------------------
 # From https://gadm.org/download_country.html
 urban_unit <-
-  read_sf("data/gadm/gadm41_VNM_shp/gadm41_VNM_3.shp",
-          options = "ENCODING=UTF-8"
+  read_sf(
+    "data/gadm/gadm41_VNM_shp/gadm41_VNM_3.shp",
+    options = "ENCODING=UTF-8"
   ) %>%
   janitor::clean_names() %>%
   st_crop(

@@ -1,5 +1,5 @@
 library(readxl)
-library(janitor)
+library(janitor) %>% suppressPackageStartupMessages()
 
 ingest_xlsx <- function(path) {
   sheets <- excel_sheets(path)

@@ -2,10 +2,7 @@
 # install.packages("pak")
 
 # pak::pkg_install("gitlab::ropensci/osmdata")
-# pak::pkg_install("r-spatial/sf")
-# pak::pkg_install("rspatial/terra")
 # pak::pkg_install("inlabru-org/fmesher")
-# pak::pkg_install("sfirke/janitor")
 
 library("osmdata")
 library("sf")

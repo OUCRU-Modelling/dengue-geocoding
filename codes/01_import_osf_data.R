@@ -35,4 +35,4 @@ hcmc_highway <- hcmc_highway %>%
 
 
 # SaveRDS
-saveRDS(hcmc_highway, "data/osm_highway.RDS")
+saveRDS(hcmc_highway, "data/osm/osm_highway.RDS")

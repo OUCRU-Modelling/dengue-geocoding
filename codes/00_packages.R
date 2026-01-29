@@ -1,14 +1,12 @@
 # Packages ----------------------------------------------------------------
-#install.packages("remotes")
-#install.packages("pak")
+# install.packages("pak")
 
+# pak::pkg_install("gitlab::ropensci/osmdata")
+# pak::pkg_install("r-spatial/sf")
+# pak::pkg_install("rspatial/terra")
+# pak::pkg_install("inlabru-org/fmesher")
+# pak::pkg_install("sfirke/janitor")
 
-#remotes::install_gitlab ("ropensci/osmdata")
-#remotes::install_github("r-spatial/sf")
-#remotes::install_github("rspatial/terra")
-#remotes::install_github("inlabru-org/fmesher")
-#remotes::install_github("sfirke/janitor")
-#pak::pak("tidyverse/tidyverse")
 library("osmdata")
 library("sf")
 library("terra")

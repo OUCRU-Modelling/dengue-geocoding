@@ -5,7 +5,7 @@ raw_data|stem|9d48a899c898e773|075677822b89d945|307ac2b4680ba7e1|-1101284392||t2
 clean_data|stem|56cd7e2363edbb10|e79791ea25c0f221|e5f7e6042411da2f|-259385813||t20482.1610529044s|s8052362b|8052362|rds|local|vector|||1.18||
 addrs|stem|1140dc9d71ac7987|1b70124e3c231412|50a290df823831c5|1894625805||t20482.1646993981s|s1693523b|1693523|rds|local|vector|||0.02||
 get_addr|function|f97be0a09f42f566
+clean_addr|stem|f1afd83cc2fe9f3a|309f3ffa9aea734b|d6079caae01b783f|1617414505||t20482.1681465468s|s1562661b|1562661|rds|local|vector|||0.39||
 get_clean_addr|function|b77eeef7232ca21f
 clean_xlsx|function|f9a33c6cfbf70100
 ingest_xlsx|function|071b8c8f80c560e6
-clean_addr|stem|f1afd83cc2fe9f3a|309f3ffa9aea734b|d6079caae01b783f|1617414505||t20482.1681465468s|s1562661b|1562661|rds|local|vector|||0.39||

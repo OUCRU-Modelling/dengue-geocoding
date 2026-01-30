@@ -6,31 +6,12 @@ library(readxl)
 library(tidyverse)
 library(vietnameseConverter)
 
-
-# Limit the number of geocoded address
-# NOTE: Too Many Requests (RFC 6585) (HTTP 429) when LIMIT over 100
-# TODO: Contact Vietmap for the request limit per minute/second
-# Maybe geocode by batch of 100
-LIMIT <- 100
-SHEET <- "2016"
-
-# TODO: load merged dataset (?) instead
-# - Also make a wrapper func for safe file read
-# --------------
-CURR_YEAR <- as.numeric(SHEET)
-cases_dat <- read_excel("./data/incidence/2000_2016_updated.xlsx", sheet=SHEET)
-# --------------
-
-cached_dat <- readRDS("./data/cached/geocoded_addr.rds")
-
-
 # ==== Util funcs =====
 
 # - Remove id in address
 # - Resolve encoding error (for data fr 2000-2008)
 # - Generate raw_addr column for geocoding
 preprocess_addr <- function(data, decode_addr=FALSE){
-
   data %>%
     mutate(
       # sometimes addr have ID in it, remove if it's the case
@@ -60,8 +41,50 @@ preprocess_addr <- function(data, decode_addr=FALSE){
     )
 }
 
+# geocode by batch of batch_size with sleep time in between batches
+geocode_by_batch <- function(x, batch_size=5, sleep=1){
+  indices <- seq(1, length(x), batch_size)
+  # generate pointers/indices for each batch
+  start <- indices
+  end <- start + (batch_size -1)
+  end[length(end)] <- min(end[length(end)], length(x))
 
-# ==== Get unique address ======
+  pmap(list(start, end), \(start, end){
+    message(paste0("Geocode addresses at indices: ", start, " - ", end))
+    out <- geo(address = x[start:end],
+               method = "vietmap",
+               api_options = list(
+                 vietmap_display_type = 2
+               ),
+               full_results = TRUE,
+               unique_only = FALSE)
+
+    if(end < length(x)) Sys.sleep(sleep)
+
+    out
+  }) %>% bind_rows()
+}
+
+
+
+# Limit the number of geocoded address
+# NOTE: Too Many Requests (RFC 6585) (HTTP 429) when LIMIT over 100
+# TODO: Contact Vietmap for the request limit per minute/second
+# Maybe geocode by batch of 100
+LIMIT <- 100
+SHEET <- "2016"
+
+# TODO: load merged dataset (?) instead
+# - Also make a wrapper func for safe file read
+# --------------
+CURR_YEAR <- as.numeric(SHEET)
+cases_dat <- read_excel("./data/incidence/2000_2016_updated.xlsx", sheet=SHEET)
+# --------------
+
+cached_dat <- readRDS("./data/cached/geocoded_addr.rds")
+
+
+# ====== Get unique addresses ======
 preprocessed_dat <- cases_dat %>%
   mutate(
     id = if_else(is.na(Maso), `Ma moi BC`, Maso)
@@ -82,16 +105,9 @@ preprocessed_dat <- preprocessed_dat %>%
 out <- preprocessed_dat %>%
   head(n = LIMIT) %>%
   mutate(
-    geo = geo(address = raw_addr,
-              method = "vietmap",
-              api_options = list(
-                vietmap_display_type = 2
-              ),
-              full_results = TRUE,
-              unique_only = FALSE)
+    geo = geocode_by_batch(raw_addr, batch_size = 100, sleep=60)
   ) %>%
   unnest(geo)
-
 # out %>% View()
 
 # ====== Cache output ========
@@ -103,4 +119,11 @@ new_cache <- bind_rows(cached_dat,
 
 # save the data.frame of geocoded address
 saveRDS(new_cache, "./data/cached/geocoded_addr.rds")
+
+
+
+
+
+
+
 

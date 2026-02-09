@@ -45,10 +45,11 @@ clean_xlsx <- function(df, remove_accent=TRUE){
         if_else(
           is.na(px) | px == "KHONG RO" | px == "THI TRAN",
           "",
-          paste0(", phường ", px)
+          paste0(", Phường ", px)
         ),
-        ", quận ", qh,
-        ", TP.HCM"
+        ", Quận ", qh
+        # geocode better without specifying HCM city sumhow
+        # ", Thành Phố Hồ Chí Minh"
       ),
       raw_addr = raw_addr %>%
         str_to_title() %>%

@@ -1,24 +1,41 @@
-# TODO: make this a script with args
-
+library(optparse)
 source("geocoding/geocoding_fns.R")
 source("geocoding/clean_data_fns.R")
 
+# ======= Handle script ======
+option_list <- list(
+  make_option("--limit", action="store", default=200,
+              help="max number of addresses to be geocoded via API call"),
+  make_option("--batch", action="store", default=100,
+              help="number of API calls before cooldown"),
+  make_option("--sleep", action="store", default=62,
+              help="cooldown time between batches of geocoding"),
+  make_option("--cache", action="store", default="./data/cached/geocoded_addr.qs",
+              help="path to .qs file that store the data.frame of geocoded address")
+)
+
+opt <- parse_args(
+  OptionParser(option_list = option_list))
+
 # ======= Data processing =======
-df_2000_2016 <- ingest_xlsx("./data/incidence/2000_2016_updated.xlsx")
+to_geocode_df <- if(!file.exists("./data/cached/to_geocode_df.qs")){
+  df_2000_2016 <- ingest_xlsx("./data/incidence/2000_2016_updated.xlsx")
 
-test_clean_df <- df_2000_2016 %>% clean_xlsx(remove_accent = FALSE)
-test_no_accent <- df_2000_2016 %>% clean_xlsx(remove_accent = TRUE)
+  cleaned_df <- df_2000_2016 %>%
+    clean_xlsx(remove_accent = TRUE) %>%
+    select(diachi, qh, px, raw_addr) %>%
+    unique()
 
-# Test number of addresses w/ and w/out removing accents
-# test_clean_addr <- test_clean_df %>% get_clean_addr(colname = "raw_addr")
-# test_clean_no_accent <- test_no_accent %>% get_clean_addr(colname = "raw_addr")
-# Note: with accent 147927 -> 135387 after get_clean_addr()
-# Note: without accent 147927 -> 134081 after get_clean_addr()
+  qs_save(cleaned_df, "./data/cached/to_geocode_df.qs")
+  cleaned_df
+}else{
+  qs_read("./data/cached/to_geocode_df.qs")
+}
 
 # ====== Geocoding data =========
 # Manual geocoding ------
 # If specific address is not available --> use centroid of ward/district as geocode
-manual_out <- test_clean_df %>%
+manual_out <- to_geocode_df %>%
   filter(is.na(diachi)) %>%
   geocode_manual(
     addr_col = "raw_addr",
@@ -34,18 +51,20 @@ message("Manual geocoding: ", nrow(manual_out$out), " addresses successfully geo
 
 # Geocoding using API call ------
 # Settings for geocoding using Vietmap API
-LIMIT <- 1 # max no. of addresses to be geocoded via Vietmap API call per geocode_df() call
-BATCH <- 1 # no. addresses per tidygeocoder::geo() call. Vietmap need "cool down" time per 100ish requests (free tier).
-SLEEP <- 62 # sleep time between batches (in seconds)
+LIMIT <- opt$limit # max no. of addresses to be geocoded via Vietmap API call per geocode_df() call
+BATCH <- opt$batch # no. addresses per tidygeocoder::geo() call. Vietmap need "cool down" time per 100ish requests (free tier).
+SLEEP <- opt$sleep # sleep time between batches (in seconds)
+path_to_cache <- opt$cache
 
-api_out <- test_clean_df %>%
+api_out <- to_geocode_df %>%
   filter(!is.na(diachi)) %>%
   geocode_df(
-    cache_path = "./data/cached/geocoded_addr.qs",
+    cache_path = path_to_cache,
+    failed_cache_path = "./data/cached/failed_geocode_addr.qs",
     colname = "raw_addr",
     limit = LIMIT,
     batch = BATCH,
     sleep = SLEEP
   )
-
 message("Vietmap geocoding: ", api_out$msg)
+

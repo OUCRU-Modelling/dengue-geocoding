@@ -29,15 +29,27 @@ geocode_by_batch <- function(x, batch_size=5, sleep=1){
     if(end < length(x)) Sys.sleep(sleep)
 
     if(nrow(out %>% filter(!is.na(long))) > 0){
-      out %>%
+      out <- out %>%
         rename(
           vietmap_district = district,
           vietmap_district_id = district_id,
           vietmap_ward = ward,
-          vietmap_ward_id = ward_id
+          vietmap_ward_id = ward_id,
+          raw_addr = address
         ) %>%
-        select(-address,-name, -hs_num, -vietmap_street, -vietmap_city)
+        select(-name, -hs_num, -vietmap_street, -vietmap_city, -city_id)
+    }else{
+      out <- out %>%
+        rename(
+          raw_addr = address
+        )
     }
+
+    # save each batch just to make sure
+    if (!dir.exists("./data/cached/batch/")) {
+      dir.create("./data/cached/batch/")
+    }
+    qs_save(out, paste0("./data/cached/batch/idx_",start, "_", end, "_", Sys.time(), ".qs"))
 
     out
   }) %>% bind_rows()
@@ -139,55 +151,84 @@ geocode_manual <- function(df,
 # limit: max no. of addresses to be geocoded via API call per geocode_df() call
 # batch: no. addresses per tidygeocoder::geo() call. Vietmap API may need "cool down" time per 100ish requests (free tier).
 # sleep: sleep time between batches (in seconds)
-geocode_df <- function(df, cache_path,
-                       colname = "raw_addr",
-                       limit=200,
-                       batch = 100,
-                       sleep = 60
-                       ){
-  # ----- Load cache ------
-  cached_dat <- if(file.exists(cache_path)){
-    qs_read(cache_path)
-  } else{
-    message("Cache not found")
-    tibble()
-  }
-  if(nrow(cached_dat)>0 && !(colname %in% colnames(cached_dat)))
-    warning(paste0("Column `", colname, "` not found in cached data"))
+geocode_df <- function(df,
+                         cache_path,
+                         failed_cache_path,
+                         colname = "raw_addr",
+                         limit=200,
+                         batch = 100,
+                         sleep = 60
+                         ){
+    # ----- Load cache ------
+    cached_dat <- if(file.exists(cache_path)){
+      qs_read(cache_path)
+    } else{
+      message("Cache not found")
+      tibble()
+    }
 
-  # ---- Get addresses to geocode -----
-  to_geocode <- df %>%
-    select(colname) %>%
-    unique() %>%
-    anti_join(cached_dat %>% select(colname))
+    failed_dat <- if(file.exists(failed_cache_path)){
+      qs_read(failed_cache_path)
+    } else{
+      message("Cache for failed addresses not found")
+      tibble()
+    }
 
-  # ---- Geocode data -----
-  limit <- if(is.na(limit) | is.null(limit)) nrow(df) else min(nrow(df), limit)
-  batch <- min(batch, limit)
-  out <- to_geocode %>%
-    head(n = limit) %>%
-    mutate(
-      geo = geocode_by_batch(raw_addr, batch_size = batch, sleep = sleep)
-    ) %>%
-    unnest(geo)
-  # only cache addresses that were successfully geocoded
-  success <- out %>% filter(!is.na(long) && !is.na(lat))
-  fail <- out %>% filter(is.na(long) | is.na(lat))
+    if(nrow(cached_dat)>0 && !(colname %in% colnames(cached_dat)))
+      warning(paste0("Column `", colname, "` not found in cached data"))
 
-  # ------ Cache output -------
-  new_cache <- bind_rows(cached_dat,
-                         success) %>%
-    unique()
-  qs_save(new_cache, cache_path)
+    # ---- Get addresses to geocode -----
+    to_geocode <- df %>%
+      select(all_of(colname)) %>%
+      unique()
 
-  list(
-    out = new_cache,
-    failed = fail,
-    msg = paste0(
-      nrow(success),
-      " out of ",
-      nrow(out),
-      " addresses successfully geocoded and appended to cache"
+    # exclude addresses that are already geocoded
+    to_geocode <- if(nrow(cached_dat)>0){
+      to_geocode %>% anti_join(cached_dat %>% select(all_of(colname)))
+    }else{
+      to_geocode
+    }
+
+    # exclude addresses that failed to be geocoded with Vietmap API
+    to_geocode <- if(nrow(failed_dat)>0){
+      to_geocode %>% anti_join(failed_dat %>% select(all_of(colname)))
+    }else{
+      to_geocode
+    }
+
+
+    # ---- Geocode data -----
+    limit <- if(is.na(limit) | is.null(limit)) nrow(df) else min(nrow(df), limit)
+    batch <- min(batch, limit)
+    out <- to_geocode %>%
+      head(n = limit) %>%
+      pull(any_of(colname)) %>%
+      geocode_by_batch(batch_size=batch, sleep=sleep)
+
+    # only cache addresses that were successfully geocoded
+    success <- out %>% filter(!is.na(long), !is.na(lat))
+    fail <- out %>% filter(is.na(long) | is.na(lat))
+
+    # ------ Cache output -------
+    # cache new successfully geocoded address
+    new_cache <- bind_rows(cached_dat,
+                           success) %>%
+      unique()
+    qs_save(new_cache, cache_path)
+    # also cache addresses that failed to b geocoded to avoid repeated api call
+    new_failed_cache <- bind_rows(failed_dat,
+                           fail) %>%
+      unique()
+    qs_save(new_failed_cache, failed_cache_path)
+
+    list(
+      out = new_cache,
+      failed = fail,
+      msg = paste0(
+        nrow(success),
+        " out of ",
+        nrow(out),
+        " addresses successfully geocoded and appended to cache"
+      )
     )
-  )
-}
+  }

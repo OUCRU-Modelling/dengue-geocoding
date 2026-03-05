@@ -20,8 +20,8 @@ geocode_by_batch <- function(x, batch_size=5, sleep=1){
     message(paste0("Geocode addresses at indices: ", start, " - ", end))
     out <- geo(address = x[start:end],
                method = "vietmap",
-               api_options = list(
-                 vietmap_display_type = 2
+               custom_query = list(
+                 "display_type" = 6
                ),
                full_results = TRUE,
                unique_only = FALSE)

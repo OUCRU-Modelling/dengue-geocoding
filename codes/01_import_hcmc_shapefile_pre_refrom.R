@@ -36,13 +36,15 @@ boundary_hcmc <- urban_unit %>%
 hcmc_district <- urban_unit %>%
   group_by(name_2) %>%
   summarise() %>%
-  st_transform(kmproj)
+  st_transform(kmproj) |>
+  mutate(id_space_district = row_number())
 
 ### Aggregating commune level
 hcmc_commune <- urban_unit %>%
   group_by(name_3) %>%
   summarise() %>%
-  st_transform(kmproj)
+  st_transform(kmproj) |>
+  mutate(id_space_commune = row_number())
 
 
 ### Old-school HCMC shapefiles

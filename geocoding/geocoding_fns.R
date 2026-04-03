@@ -3,6 +3,7 @@
 # devtools::install("/Users/anhptq/Desktop/tidygeocoder")
 library(tidygeocoder)
 library(tidyverse)
+library(stringi)
 library(qs2)
 library(terra)
 library(sf)
@@ -21,10 +22,13 @@ geocode_by_batch <- function(x, batch_size=5, sleep=1){
     out <- geo(address = x[start:end],
                method = "vietmap",
                custom_query = list(
-                 "display_type" = 6
+                 "display_type" = 6,
+                 "cityId"=12
                ),
                full_results = TRUE,
-               unique_only = FALSE)
+               unique_only = FALSE,
+               min_time = 0.1 #time per request (set to 10 requests per sec here)
+               )
 
     if(end < length(x)) Sys.sleep(sleep)
 

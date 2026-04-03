@@ -1,6 +1,5 @@
 library(optparse)
 source("geocoding/geocoding_fns.R")
-source("geocoding/clean_data_fns.R")
 
 # ======= Handle script ======
 option_list <- list(
@@ -19,15 +18,8 @@ opt <- parse_args(
 
 # ======= Data processing =======
 to_geocode_df <- if(!file.exists("./data/cached/to_geocode_df.qs")){
-  df_2000_2016 <- ingest_xlsx("./data/incidence/2000_2016_updated.xlsx")
-
-  cleaned_df <- df_2000_2016 %>%
-    clean_xlsx(remove_accent = TRUE) %>%
-    select(diachi, qh, px, raw_addr) %>%
-    unique()
-
-  qs_save(cleaned_df, "./data/cached/to_geocode_df.qs")
-  cleaned_df
+  clean_dat <- source("geocoding/clean_incidence_data.R")
+  clean_dat$value
 }else{
   qs_read("./data/cached/to_geocode_df.qs")
 }
@@ -46,6 +38,7 @@ manual_out <- to_geocode_df %>%
     admin2_gadm = "./data/gadm/gadm41_VNM_2_pk.rds"
   )
 
+qs_save(manual_out, "./data/cached/geocoded_manual.qs")
 message("Manual geocoding: ", nrow(manual_out$out), " addresses successfully geocoded, while ",
         nrow(manual_out$failed), " failed")
 

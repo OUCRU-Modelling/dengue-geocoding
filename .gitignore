@@ -49,3 +49,6 @@ po/*~
 rsconnect/
 
 .DS_store
+
+# folder for testing and other stuffs
+sandbox

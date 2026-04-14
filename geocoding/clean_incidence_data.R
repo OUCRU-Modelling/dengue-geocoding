@@ -10,7 +10,7 @@ library(tidyverse)
 source("geocoding/clean_data_fns.R")
 
 path_2000_2016 <- "./data/incidence/2000_2016_updated.xlsx"
-path_2017_2025 <- "./data/incidence/raw_data_Rt_SXH_2017-2025_GSCB"
+path_2017_2025 <- "./data/incidence/DATA_FROM_HCDC/raw_data"
 
 # ======= Process incidence data from 2000 - 2016 =========
 
@@ -97,7 +97,7 @@ to_geocode <- bind_rows(
 #   {.}
 
 # Cache to geocode df
-qs_save(to_geocode, "./data/cached/to_geocode_df.qs")
+# qs_save(to_geocode, "./data/cached/to_geocode_df.qs")
 
 
 # see addresses with only numeric
@@ -110,12 +110,6 @@ qs_save(to_geocode, "./data/cached/to_geocode_df.qs")
 # to_geocode %>%
 #   filter(!is.na(diachi)) %>%
 #   filter(str_detect(diachi, "^[a-zA-Z]+$"))
-
-to_geocode
-
-
-
-
 
 
 

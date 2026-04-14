@@ -49,11 +49,13 @@ geocode_by_batch <- function(x, batch_size=5, sleep=1){
         )
     }
 
+    # create cache folder for each date to be a bit more clean
+    batch_path <- paste0("./data/cached/batch/", Sys.Date())
     # save each batch just to make sure
-    if (!dir.exists("./data/cached/batch/")) {
-      dir.create("./data/cached/batch/")
+    if (!dir.exists(batch_path)) {
+      dir.create(batch_path)
     }
-    qs_save(out, paste0("./data/cached/batch/idx_",start, "_", end, "_", Sys.time(), ".qs"))
+    qs_save(out, paste0(batch_path, "/idx_",start, "_", end, "_", Sys.time(), ".qs"))
 
     out
   }) %>% bind_rows()

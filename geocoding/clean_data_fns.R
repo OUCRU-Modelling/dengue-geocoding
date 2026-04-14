@@ -69,7 +69,7 @@ clean_xlsx <- function(df,
   }
 
   if(all_num_na){
-    # treat diachi that are all characters as NA
+    # treat diachi that are all numerics as NA
     df <- df %>%
       mutate(
         diachi = if_else(

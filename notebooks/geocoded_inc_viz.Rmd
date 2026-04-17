@@ -1,0 +1,159 @@
+---
+title: "geocoded_inc_viz"
+output: html_document
+---
+
+### Set up
+
+```{r}
+library(tidyverse)
+library(plotly)
+library(ggspatial)
+library(leaflet)
+library(terra)
+```
+
+Load all the data
+
+```{r}
+# HCM shape file
+hcmc_shps <- read_rds("../data/gadm/shapefiles_hcmc_pre_reform.RDS")
+hcmc_shp <- hcmc_shps$urban_unit %>% 
+  filter(!(name_2 == "Outside HCMC"))
+
+# use WGS84 projection is is required by leaflet later on
+hcmc_shp <- st_transform(hcmc_shp, "EPSG:4326")
+
+# geocoded incidence
+datapath <- "../data/geocoded_data/"
+geocoded_inc <- list.files(datapath, full.names=TRUE) %>% 
+  map(\(f){read_rds(f)}) %>% 
+  bind_rows()
+
+hcmc_shps$boundary_hcmc %>% 
+  st_transform("EPSG:4326") %>% 
+  ggplot() +
+    geom_sf()
+```
+
+Some helper functions for plotting
+
+```{r}
+# Function to visualize geococoded data points in dat on shapefile
+vis_points_map <- function(dat, shapedat, 
+                           osm_layer=TRUE,
+                           pt_size=0.3, pt_color="black", pt_alpha=0.2){
+
+  vis_in <- dat %>% 
+    st_transform(crs = st_crs(shapedat)) %>% 
+    st_join(shapedat, join = st_within) %>%
+    filter(!is.na(gid_2))
+  
+  out <- ggplot()
+  
+  if(osm_layer){
+    out <- out + 
+      geom_sf(data = shapedat, aes(color = name_2), fill=NA) +
+      annotation_map_tile(type = "osm", zoom=10)
+  }else{
+    out <- out + 
+      geom_sf(data = shapedat, aes(fill = name_2))
+  }
+  
+  out +
+    geom_sf(data = vis_in, size=pt_size, alpha=pt_alpha, color = pt_color) +
+    guides(fill = "none", color = "none")
+}
+
+vis_points_map_leaflet <- function(dat, shapedat, 
+                                   osm_layer = TRUE,
+                                   pt_size=0.3, pt_color="black", pt_alpha=0.2){
+  vis_in <- dat %>% 
+    st_transform(crs = st_crs(shapedat)) %>% 
+    st_join(shapedat, join = st_within) %>%
+    filter(!is.na(gid_2))
+  
+  out <- leaflet(options = leafletOptions(
+    minZoom = 10
+  ))
+  
+  # add OSM tiles if specified
+  if (osm_layer) {
+    out <- out %>%
+      addProviderTiles(providers$OpenStreetMap)
+  }
+  
+  # ddd commune boundaries
+  out <- out %>%
+    addPolygons(
+      data = shapedat,
+      color = "darkred",
+      weight = 2,
+      fill = FALSE,
+      group = "Communes"
+    )
+  
+  # add points
+  out <- out %>%
+    addCircleMarkers(
+      data = vis_in,
+      radius = pt_size,
+      fillOpacity = pt_alpha,
+      stroke = FALSE,
+      color = pt_color,
+      group = "Cases"
+    )
+  
+  out
+}
+```
+
+### Plotting
+
+#### Overall
+
+HCMC map with and without dengue incidence
+
+```{r}
+ggplot() +
+    geom_sf(data = hcmc_shp, aes(fill = name_2)) +
+    guides(fill="none")
+
+geocoded_inc %>% 
+  vis_points_map(shapedat = hcmc_shp, osm_layer = FALSE,
+                 pt_size=0.3, pt_alpha=0.2)
+```
+
+#### Per year
+
+Plotting dengue incidence by hospitalization year
+
+```{r}
+dat_by_year <- geocoded_inc %>%
+  mutate(
+    hosp_year = year(date_hosp)
+  ) %>% 
+  group_by(hosp_year) %>% 
+  nest() %>% 
+  mutate(
+    plot = map2(hosp_year, data, \(year, dat){
+      dat %>% 
+        vis_points_map(shapedat = hcmc_shp, osm_layer=FALSE) +
+          labs(
+            title = paste0("Dengue incidence in ", year)
+          )
+    })
+  )
+```
+
+```{r}
+dat_by_year$plot
+```
+
+#### Over OpenStreetMap
+
+```{r}
+geocoded_inc %>% 
+  filter(year(date_hosp) == 2019) %>% 
+  vis_points_map_leaflet(shapedat = hcmc_shp, pt_alpha=1, pt_size=2)
+```

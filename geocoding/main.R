@@ -29,20 +29,22 @@ to_geocode_df <- if(!file.exists("./data/cached/to_geocode_df.qs")){
 # If specific address is not available --> use centroid of ward/district as geocode
 # TODO: Manual geocoding is deprecated, leave addresses with na diachi as is
 # Also update the path to shapefile
-manual_out <- to_geocode_df %>%
-  filter(is.na(diachi)) %>%
-  geocode_manual(
-    addr_col = "raw_addr",
-    admin3_col = "px",
-    admin2_col = "qh",
-    na_label = c("KHONG RO", "THI TRAN"),
-    admin3_gadm = "./data/gadm/gadm41_VNM_3_pk.rds",
-    admin2_gadm = "./data/gadm/gadm41_VNM_2_pk.rds"
-  )
 
-qs_save(manual_out, "./data/cached/geocoded_manual.qs")
-message("Manual geocoding: ", nrow(manual_out$out), " addresses successfully geocoded, while ",
-        nrow(manual_out$failed), " failed")
+# manual_out <- to_geocode_df %>%
+#   filter(is.na(diachi)) %>%
+#   geocode_manual(
+#     addr_col = "raw_addr",
+#     admin3_col = "px",
+#     admin2_col = "qh",
+#     na_label = c("KHONG RO", "THI TRAN"),
+#     admin3_gadm = "./data/gadm/gadm41_VNM_3_pk.rds",
+#     admin2_gadm = "./data/gadm/gadm41_VNM_2_pk.rds"
+#   )
+#
+# qs_save(manual_out, "./data/cached/geocoded_manual.qs")
+# message("Manual geocoding: ", nrow(manual_out$out), " addresses successfully geocoded, while ",
+#         nrow(manual_out$failed), " failed")
+
 
 # Geocoding using API call ------
 # Settings for geocoding using Vietmap API

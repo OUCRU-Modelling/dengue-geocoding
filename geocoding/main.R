@@ -1,5 +1,5 @@
 library(optparse)
-source("geocoding/geocoding_fns.R")
+source("R/geocoding_fns.R")
 
 # ======= Handle script ======
 option_list <- list(
@@ -18,7 +18,7 @@ opt <- parse_args(
 
 # ======= Data processing =======
 to_geocode_df <- if(!file.exists("./data/cached/to_geocode_df.qs")){
-  clean_dat <- source("geocoding/clean_incidence_data.R")
+  clean_dat <- source("./codes/02_generate_to_geocode.R")
   clean_dat$value
 }else{
   qs_read("./data/cached/to_geocode_df.qs")
@@ -27,6 +27,8 @@ to_geocode_df <- if(!file.exists("./data/cached/to_geocode_df.qs")){
 # ====== Geocoding data =========
 # Manual geocoding ------
 # If specific address is not available --> use centroid of ward/district as geocode
+# TODO: Manual geocoding is deprecated, leave addresses with na diachi as is
+# Also update the path to shapefile
 manual_out <- to_geocode_df %>%
   filter(is.na(diachi)) %>%
   geocode_manual(

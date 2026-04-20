@@ -13,14 +13,14 @@ geocoded_addr <- qs_read("./data/cached/geocoded_addr.qs")
 
 # ========== Export data ===========
 start_date <- "2002-01-01"
-end_date <- "2022-01-01"
+# end_date <- "2022-01-01"
 to_export <- full_incidence %>%
   left_join(
     geocoded_addr %>% select(raw_addr, long, lat)
   ) %>%
   filter(
-    ng_vaovien >= as.Date(start_date),
-    ng_vaovien < as.Date(end_date)
+    ng_vaovien >= as.Date(start_date)
+    # ng_vaovien < as.Date(end_date)
   )
 
 to_export_list <- to_export %>%

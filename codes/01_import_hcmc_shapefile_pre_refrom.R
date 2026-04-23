@@ -4,10 +4,9 @@ source("codes/00_packages.R", verbose = T)
 
 # Shapefile ---------------------------------------------------------------
 # From https://gadm.org/download_country.html
-urban_unit <-
-  read_sf("data/gadm/gadm41_VNM_shp/gadm41_VNM_3.shp",
-          options = "ENCODING=UTF-8"
-  ) %>%
+urban_unit <- read_rds("data/gadm/gadm41_VNM_3_pk.rds") %>%
+  terra::unwrap() %>%
+  st_as_sf(options = "ENCODING=UTF-8") %>%
   janitor::clean_names() %>%
   st_crop(
     xmin = cropvector[1],
@@ -37,13 +36,15 @@ boundary_hcmc <- urban_unit %>%
 hcmc_district <- urban_unit %>%
   group_by(name_2) %>%
   summarise() %>%
-  st_transform(kmproj)
+  st_transform(kmproj) |>
+  mutate(id_space_district = row_number())
 
 ### Aggregating commune level
 hcmc_commune <- urban_unit %>%
   group_by(name_3) %>%
   summarise() %>%
-  st_transform(kmproj)
+  st_transform(kmproj) |>
+  mutate(id_space_commune = row_number())
 
 
 ### Old-school HCMC shapefiles

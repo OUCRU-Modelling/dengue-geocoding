@@ -3,6 +3,7 @@
 # devtools::install("/Users/anhptq/Desktop/tidygeocoder")
 library(tidygeocoder)
 library(tidyverse)
+library(stringi)
 library(qs2)
 library(terra)
 library(sf)
@@ -20,11 +21,14 @@ geocode_by_batch <- function(x, batch_size=5, sleep=1){
     message(paste0("Geocode addresses at indices: ", start, " - ", end))
     out <- geo(address = x[start:end],
                method = "vietmap",
-               api_options = list(
-                 vietmap_display_type = 2
+               custom_query = list(
+                 "display_type" = 6,
+                 "cityId"=12
                ),
                full_results = TRUE,
-               unique_only = FALSE)
+               unique_only = FALSE,
+               min_time = 0.1 #time per request (set to 10 requests per sec here)
+               )
 
     if(end < length(x)) Sys.sleep(sleep)
 
@@ -45,11 +49,13 @@ geocode_by_batch <- function(x, batch_size=5, sleep=1){
         )
     }
 
+    # create cache folder for each date to be a bit more clean
+    batch_path <- paste0("./data/cached/batch/", Sys.Date())
     # save each batch just to make sure
-    if (!dir.exists("./data/cached/batch/")) {
-      dir.create("./data/cached/batch/")
+    if (!dir.exists(batch_path)) {
+      dir.create(batch_path)
     }
-    qs_save(out, paste0("./data/cached/batch/idx_",start, "_", end, "_", Sys.time(), ".qs"))
+    qs_save(out, paste0(batch_path, "/idx_",start, "_", end, "_", Sys.time(), ".qs"))
 
     out
   }) %>% bind_rows()

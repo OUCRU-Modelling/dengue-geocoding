@@ -4,6 +4,8 @@ library("sf")
 library("terra")
 library("fmesher")
 library("tidyverse")
+library("readxl")
+library("qs2")
 
 # VN projection and HCMC spatial extent -----------------------------------
 # Roughly HCMC spatial extent

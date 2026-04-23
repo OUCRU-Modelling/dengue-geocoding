@@ -1,0 +1,215 @@
+---
+title: "Export proportion of geocoded data per commune"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(qs2)
+```
+
+## Summary
+
+Create a dataset summarizing proportion of geocoded data, grouping by: date hospitalized + commune (by GADM convention)
+
+## Data
+
+### Load data
+
+Load minimal data
+
+```{r}
+dat_2000_2016 <- read_csv("./data/incidence/incidence_2000_2016_minimal.csv")
+dat_2017_2025 <- read_csv("./data/incidence/incidence_2017_2025_minimal.csv")
+
+full_incidence <- bind_rows(
+  dat_2000_2016,
+  dat_2017_2025
+)
+full_incidence
+```
+
+Load cleaned geocoded addresses
+
+```{r}
+geocoded_addr_clean <- qs_read("./data/cached/geocoded_addr_clean.qs")
+geocoded_addr_clean
+```
+
+Load geo data
+
+```{r}
+hcmc_shape <- read_rds("./data/gadm/hcmc_shapefiles.rds")
+commune_gadm <- hcmc_shape$commune_322 
+commune_gadm
+```
+
+### Clean communes
+
+Compute the proportion of geocoded data
+
+```{r}
+full_incidence_clean <- full_incidence %>% 
+  left_join(
+    geocoded_addr_clean %>% 
+      select(raw_addr,vietmap_district, vietmap_commune, long, lat)
+  ) %>% 
+  filter(
+    ng_vaovien >= as.Date("2002-01-01")
+  ) %>% 
+  mutate(
+    # Format px, qh such that it matches that of GADM
+    px = str_remove(px, "(Phường |Xã |Thị trấn |Thị Trấn |THI TRAN)"),
+    px = case_when(
+      # handle px starts with 0
+      str_detect(px, "^0\\d$") ~ str_replace(px, "0", "Phường "),
+      str_detect(px, "^\\d+$") ~ paste0("Phường ", px),
+      .default = px
+    ),
+    px = stri_trans_general(px, "Latin-ASCII"),
+    px = str_to_title(px),
+    qh = str_remove(qh, "(Quận |Huyện )"),
+    qh = case_when(
+      # handle px starts with 0
+      str_detect(qh, "^0\\d$") ~ str_replace(qh, "0", "Quận "),
+      str_detect(qh, "^\\d+$") ~ paste0("Quận ", qh),
+      .default = qh
+    ),
+    qh = stri_trans_general(qh, "Latin-ASCII"),
+    qh = str_to_title(qh),
+    # Do the exact same thing w/ Vietmap district and commune
+    vietmap_district = str_remove(vietmap_district, "(Quận |Huyện )"),
+    vietmap_district = if_else(
+      str_detect(vietmap_district, "^\\d+$"), 
+      paste0("Quận ", vietmap_district), vietmap_district
+    ),
+    vietmap_district = stri_trans_general(vietmap_district, "Latin-ASCII"),
+    vietmap_district = str_to_title(vietmap_district),
+    vietmap_commune = str_remove(vietmap_commune, "(Phường |Xã |Thị Trấn )"),
+    vietmap_commune = if_else(
+      str_detect(vietmap_commune, "^\\d+$"), 
+      paste0("Phường ", vietmap_commune), vietmap_commune
+    ),
+    vietmap_commune = stri_trans_general(vietmap_commune, "Latin-ASCII"),
+    vietmap_commune = str_to_title(vietmap_commune),
+  ) 
+```
+
+```{r}
+# update qh Khong Ro and px Khong Ro with VietMap output if available
+full_incidence_clean <- full_incidence_clean %>% 
+  mutate(
+    qh = if_else((is.na(qh) | qh == "Khong Ro" | qh == ""), vietmap_district, qh),
+    px = if_else((is.na(px) | px == "Khong Ro" | px == ""), vietmap_commune, px)
+  ) 
+```
+
+### Get corresponding GADM name
+
+Map qh, px to corresponding GADM varname_3 for consistency
+
+```{r}
+commune_gadm <- commune_gadm %>% 
+  select(name_2, name_3, varname_3, geometry) %>% 
+    mutate(
+      # generate key for mapping
+      name_2_key = stri_trans_general(name_2, "Latin-ASCII"),
+      name_2_key = str_to_title(name_2_key),
+      # generate key for mapping
+      name_3_key = stri_trans_general(name_3, "Latin-ASCII"),
+      name_3_key = str_to_title(name_3_key)
+    ) 
+```
+
+First, try mapping by name
+
+```{r}
+full_incidence_gadm <- full_incidence_clean %>% 
+  left_join(
+    commune_gadm %>% 
+      as_tibble() %>% 
+      select(-geometry),
+    by = join_by(
+      px == name_3_key, qh == name_2_key
+    )
+  )
+
+# get the incidence that have been mapped to GADM commune name here
+full_incidence_gadm_1 <- full_incidence_gadm %>% 
+  filter(!is.na(name_3))
+```
+
+For communes that failed to map using name, try using geocoded data for mapping (if available)
+
+```{r}
+full_incidence_gadm_2 <- full_incidence_gadm %>% 
+  filter(is.na(name_3)) %>% 
+  select(-name_3, -name_2, -varname_3) %>% 
+  filter(!is.na(long)) %>% 
+  mutate(
+    long_pt = long,
+    lat_pt = lat
+  ) %>% 
+  st_as_sf(coords = c("long_pt", "lat_pt"), crs = crs(commune_gadm)) %>% 
+  st_join( commune_gadm %>% 
+             select(name_2, name_3, varname_3), 
+           join = st_within) %>% 
+  as_tibble() %>% 
+  select(-geometry) %>% 
+  filter(
+    !is.na(name_3)
+  )
+
+full_incidence_gadm_2
+```
+
+**Note** 3,704 incidence cannot be geocoded and does not have data up to district level
+
+```{r}
+full_incidence_gadm %>% 
+  filter(is.na(name_3), is.na(long))
+```
+
+### Compute geocoded prop
+
+Summarize based on name_3 in GADM
+
+```{r}
+geocoded_prop <- bind_rows(
+  full_incidence_gadm_1,
+  full_incidence_gadm_2
+) %>% 
+  group_by(
+    ng_vaovien, name_2, name_3, varname_3
+  ) %>% 
+  summarize(
+    total_inc = n(),
+    na_address = sum(is.na(diachi)),
+    geocoded_inc = sum(!is.na(long)),
+    geocoded_prop = geocoded_inc/total_inc
+  ) %>% 
+  ungroup()
+```
+
+```{r}
+# geocoded_prop %>%
+#   rename(
+#     date_hosp = ng_vaovien
+#   ) %>%
+#   write_rds("./data/export/geocoded_prop.rds")
+
+read_rds("./data/export/geocoded_prop.rds")
+```
+
+```{r}
+full_incidence_gadm %>% 
+  filter(is.na(name_3), is.na(long)) %>% 
+  rename(
+    raw_address = diachi,
+    raw_district = qh, 
+    raw_commune = px,
+    hosp_date = ng_vaovien
+  ) %>% 
+  select(raw_address, raw_commune, raw_district, hosp_date) %>% 
+  write_rds("./out/data/failed_gadm_map.rds")
+```

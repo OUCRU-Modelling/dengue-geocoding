@@ -2,4 +2,5 @@
 *.xlsx
 *.csv
 cached/*
+geocoded_data/*
 /.DS_store

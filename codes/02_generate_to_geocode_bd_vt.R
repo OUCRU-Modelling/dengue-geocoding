@@ -1,4 +1,4 @@
-# Generate the to_geocode_df.qs file containing all raw addresses to be geocoded
+# Generate Binh Duong and Ba Ria - Vung Tau data to be geocoded
 source("codes/00_packages.R", verbose=TRUE)
 
 incidence_bd_vt_2017_2025 <- read_csv("./data/incidence/incidence_bd_vt_2017_2025.csv")

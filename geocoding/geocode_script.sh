@@ -12,13 +12,35 @@
 # load R
 module load R-base/4.4.2
 
-# TODO: code to run pipeline (on server)
+# script to geocode hcm data
 cd /home/anhptq/dengue-geocoding
 /package/R-base/4.4.2/bin/Rscript geocoding/main.R --limit=10000 --batch=2000 --sleep=20 >> geocoding/cron_r.log 2>&1
+
+# script to geocode BD-VT dat
+# cd /home/anhptq/dengue-geocoding
+# /package/R-base/4.4.2/bin/Rscript geocoding/main.R \
+#     --limit=30000 --batch=2000 --sleep=20 \
+#     --to_geocode="./data/cached/to_geocode_bd_vt_df.qs" \
+#     --cache="./data/cached/geocoded_bd_vt_df.qs" \
+#     --cache_failed="./data/cached/failed_geocoded_bd_vt_df.qs" \
+#     --generate_to_geo="./codes/02_generate_to_geocode_bd_vt.R" \
+#     >> geocoding/cron_r.log 2>&1
+
+# script to geocode address after the merge in August 2025
+# cd /home/anhptq/dengue-geocoding
+# /package/R-base/4.4.2/bin/Rscript geocoding/main.R \
+#     --limit=1 --batch=1 --sleep=20 \
+#     --to_geocode="./data/cached/to_geocode_aug2025.qs" \
+#     --cache="./data/cached/geocoded_aug2025_df.qs" \
+#     --cache_failed="./data/cached/failed_geocoded_aug2025_df.qs" \
+#     --generate_to_geo="./codes/05_generate_to_geocode_aug2025.R" \
+#     >> geocoding/cron_r.log 2>&1
+
 
 # example cron job that will run at 4:08 pm daily
 # 08 16 * * * [path to Rscript] [path to .R file] >> [path to log file] 2>&1
 # 00 10 * * * sbatch /home/anhptq/dengue-geocoding/geocoding/geocode_script.sh
+
 
 # upload the whole folder to the server
 # rsync -av --progress --exclude 'renv/library/' \

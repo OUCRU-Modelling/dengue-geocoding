@@ -3,23 +3,12 @@ source("codes/00_packages.R", verbose=TRUE)
 
 # ======= Load incidence and geocoded addresses ======
 incidence_bd_vt <- read_csv("./data/incidence/incidence_bd_vt_2017_2025.csv")
-geocoded_addr_bd_vt <- qs_read("./data/cached/geocoded_bd_vt_df.qs")
-
-# preprocess new address
-geocoded_addr_bd_vt_clean <- geocoded_addr_bd_vt %>%
-  mutate(
-    new_addr_split = str_split(display_alt, "(Phường |Xã )"),
-    new_commune = map_chr(new_addr_split, \(addr){addr[length(addr)]}),
-    new_commune_split = str_split(new_commune, ","),
-    new_commune = map_chr(new_commune_split, \(addr){addr[1]}),
-    new_province = map_chr(new_commune_split, \(addr){addr[2]})
-  ) %>%
-  select(-new_addr_split, -new_commune_split)
+geocoded_addr_bd_vt <- qs_read("./data/cached/geocoded_bd_vt_clean.qs")
 
 # ========== Export data ===========
 to_export_bd_vt <- incidence_bd_vt %>%
   left_join(
-    geocoded_addr_bd_vt_clean %>%
+    geocoded_addr_bd_vt %>%
       select(raw_addr, display, long, lat, new_commune)
   )
 

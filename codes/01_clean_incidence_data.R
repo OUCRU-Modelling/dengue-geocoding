@@ -76,7 +76,7 @@ incidence_2017_2025_minimal <- if(!file.exists("./data/incidence/incidence_2017_
 # Note that the output format is slightly different since this data is not used for modelling
 incidence_bd_vt_2017_2025 <- if(!file.exists("./data/incidence/incidence_bd_vt_2017_2025.csv")){
   files <- list.files("./data/incidence/DATA_FROM_HCDC/cleaned_data", full.names = TRUE)
-  files <- files[str_detect(files, "bd|vt")] # exclude Vung Tau and Binh Duong
+  files <- files[str_detect(files, "bd|vt")] # get Vung Tau and Binh Duong
 
   # load all the raw files
   incidence_bd_vt_2017_2025 <- map(
@@ -96,9 +96,6 @@ incidence_bd_vt_2017_2025 <- if(!file.exists("./data/incidence/incidence_bd_vt_2
       qh = quan_huyen_cu,
       ng_khoibenh = ngay_khoi_phat_trieu_chung,
       ng_vaovien = ngay_nhap_vien_kham_benh
-    ) %>%
-    select(
-      tuoi, diachi, px, qh, ng_khoibenh, ng_vaovien
     ) %>%
     arrange(ng_vaovien) %>%
     clean_xlsx(remove_accent = TRUE, prefix=FALSE, all_chr_na=TRUE, all_num_na = TRUE)

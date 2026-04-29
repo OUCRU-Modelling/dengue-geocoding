@@ -3,4 +3,5 @@
 *.csv
 cached/*
 geocoded_data/*
+geocoded_raw_inc/*
 /.DS_store

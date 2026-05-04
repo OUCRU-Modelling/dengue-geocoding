@@ -82,5 +82,18 @@ to_export_aug2025 <- incidence_aug2025 %>%
 writexl::write_xlsx(to_export_aug2025, "./data/geocoded_raw_inc/incidence_hcm_aug2025.xlsx")
 
 
+# ------- For Modelling --------
+to_export_aug2025_mod <- to_export_aug2025 %>%
+  select(
+    ngay_nhap_vien_kham_benh, long, lat
+  ) %>%
+  rename(
+    date_hosp = ngay_nhap_vien_kham_benh
+  ) %>%
+  filter(!is.na(long), !is.na(lat)) %>%
+  st_as_sf(
+    coords = c("long", "lat"),
+    crs    = 4326
+  )
 
-
+write_rds(to_export_aug2025_mod, "data/geocoded_data/hcmc_post_merge/geocoded_merged_2025.rds")

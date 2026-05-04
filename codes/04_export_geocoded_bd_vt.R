@@ -57,25 +57,6 @@ to_export_bd_vt_model <- to_export_bd_vt %>%
   group_by(year_hosp) %>%
   nest()
 
-to_export_bd_vt %>%
-  rename(
-    date_hosp = ng_vaovien,
-    long = long,
-    lat = lat
-  ) %>%
-  mutate(
-    year_hosp = year(date_hosp)
-  ) %>%
-  group_by(thanh_pho_cu, year_hosp) %>%
-  summarize(
-    total_inc = n(),
-    na_inc = sum(is.na(diachi)),
-    geocoded_inc = sum(!is.na(long)),
-    geo_prop = geocoded_inc/(total_inc - na_inc)
-  ) %>%
-  arrange(thanh_pho_cu, year_hosp) %>%
-  View()
-
 map2(to_export_bd_vt_model$data, to_export_bd_vt_model$year_hosp, \(dat, year){
   dat %>%
     filter(!is.na(long), !is.na(lat)) %>%

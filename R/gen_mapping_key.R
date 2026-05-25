@@ -62,7 +62,16 @@ generate_key_dat_to_2023 <- function(data,
                          city_key),
       district_key = if_else(commune_key == "tam_an",
                              "long_dat",
-                             district_key)
+                             district_key),
+      name_1 = if_else(commune_key == "tam_an",
+                         "Bà Rịa - Vũng Tàu",
+                         city_key),
+      name_2 = if_else(commune_key == "tam_an",
+                       "Long Đất",
+                       city_key),
+      name_3 = if_else(commune_key == "tam_an",
+                       "Tam An",
+                       city_key)
     )
 
   list(

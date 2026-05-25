@@ -44,7 +44,7 @@ commune_district_crosswalk_2023 <- tribble(
 # In cases where data have merged commune --> merge shapefile instead
 merge_gis_polygons <- list(
   "tam_an" = c("an_ngai", "tam_nhut", "tam_phuoc"),
-  "phuoc_trung" = c("phuoc_trung", "phuoc_hiep"),
+  # "phuoc_trung" = c("phuoc_trung", "phuoc_hiep"),
   "phuoc_hoi" = c("phuoc_hoi", "loc_an"),
   "phuoc_hai" = c("phuoc_hai", "long_my")
 )

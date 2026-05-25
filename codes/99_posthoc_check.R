@@ -62,7 +62,7 @@ choose_coordinate_match <- function(containing_rows, address_id) {
   if (!length(containing_rows)) {
     return(NA_integer_)
   }
-  candidate_ids <- b4_merge_sf$polygon_id[address_id]
+  candidate_ids <- b4_merge_sf$polygon_id[containing_rows]
   if (address_id %in% candidate_ids) address_id else candidate_ids[1]
 }
 
@@ -125,6 +125,12 @@ compare_address_coordinate_mapping %>%
     total = n()
   )
 
+# compare_address_coordinate_mapping %>%
+#   filter(
+#     coordinate_polygon_id != address_polygon_id
+#   ) %>%
+#   View()
+
 
 # ========== Check geocode new commune =============
 # Do the following
@@ -174,3 +180,16 @@ mapped_incidence %>%
     total = n(),
     matched_prop = (matched)/(n() - no_geocode)
   )
+
+mapped_incidence %>%
+  filter(
+    loai_sap_nhap == "toan phan"
+  ) %>%
+  select(dia_chi,
+         phuong_xa_cu, quan_huyen_cu, thanh_pho_cu,
+         diachi_api, long, lat,
+         px_moi,
+         ten_xa_cu, ten_huyen_cu, ten_xa_moi, loai_sap_nhap
+  ) %>%
+  filter(px_moi != ten_xa_moi) %>%
+  View()

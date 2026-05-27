@@ -34,6 +34,7 @@ preprocess_incidence <- preprocess_b4_merge$dat %>%
     .row_id = row_number()
   )
 
+## -------- Manual mapping -------------
 # manually assign incidence to each polygon by name
 manual_mapping <- full_join(
   preprocess_incidence,
@@ -48,6 +49,7 @@ manual_mapping <- full_join(
     address_polygon_id = polygon_id
   )
 
+## -------- Coordinate mapping -------------
 # handle cases where coordinate is right on the border between 2 polygons
 # prioritize results that are consistent with the manual mapping result
 coordinate_points <- manual_mapping[!is.na(manual_mapping$long), ]  %>%
@@ -106,24 +108,27 @@ compare_address_coordinate_mapping <- preprocess_incidence %>%
     by = ".row_id"
   ) %>%
   select(
-    .row_id, phuong_xa_cu, quan_huyen_cu, thanh_pho_cu,
+    .row_id, dia_chi, phuong_xa_cu, quan_huyen_cu, thanh_pho_cu,
     diachi_api, long, lat,
     address_polygon_id, coordinate_polygon_id,
     address_commune, address_district, coordinate_commune, coordinate_district
   )
 
-# Summary
+## --------- Summarize ---------
 compare_address_coordinate_mapping %>%
+  # group_by(thanh_pho_cu) %>%
   summarize(
-    no_geocode = sum(is.na(long)),
     with_geocode = sum(!is.na(long)),
+    with_coordinate_polygon = sum(!is.na(coordinate_polygon_id)),
+    geocode_outside_shape = sum(!is.na(long) & is.na(coordinate_polygon_id), na.rm = TRUE),
+    with_address_polygon = sum(!is.na(address_polygon_id)),
     matched = sum(address_polygon_id == coordinate_polygon_id, na.rm = TRUE),
     mismatched = sum(address_polygon_id != coordinate_polygon_id, na.rm = TRUE),
-    geocode_outside_shape = sum(!is.na(long) & is.na(coordinate_polygon_id), na.rm = TRUE),
     cant_assign = sum(is.na(coordinate_polygon_id) & is.na(address_polygon_id)),
     matched_prop = matched/with_geocode,
     total = n()
   )
+# NOTE: using GISvn --> 25,404 mismatched as opposed to 33,045 mismatched
 
 # compare_address_coordinate_mapping %>%
 #   filter(

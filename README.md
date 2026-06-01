@@ -25,13 +25,19 @@ Main workflow:
 
 -   `01_clean_incidence_data.R` clean and standardize raw incidence data
 
--   `02_generate_to_geocode.R` extract unique addresses for geocoding
+-   `02_generate_to_geocode.R` and `02_generate_to_geocode_bd_vt.R`: extract unique addresses for geocoding
 
-    -   Output: `data/cached/to_geocoded_df.qs`
+    -   Output:
+
+        -   `data/cached/to_geocode_df.qs` HCMC data before 2025 merge
+
+        -   `data/cached/to_geocode_bd_vt_df.qs` Binh Duong, Vung Tau data before 2025 merge
 
     -   The geocoding process is handled separately
 
--   `03_export_geocoded_incidence.R` export incidence data with the GPS coordinates
+-   `04_export_geocoded_*.R` export incidence data with the GPS coordinates
+
+-   `05_export_geocoded_aug2025.R` extracting addresses (after 2025 merge) for geocoding, also checks against existing geocoded results to avoid duplicate geocoding.
 
 ### Data geocoding (`geocoding/`)
 

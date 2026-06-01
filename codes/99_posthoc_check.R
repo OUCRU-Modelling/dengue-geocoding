@@ -1,13 +1,20 @@
 source("R/gen_mapping_key.R")
 library(readxl)
 
-# ========== Load incidence data ===========
+# ========== Load incidence data (with geocode) ===========
 old_area_raw_incidence_2017_2025 <- bind_rows(
   map(excel_sheets("./data/incidence/incidence_2017_2025.xlsx"),
       ~ read_excel("./data/incidence/incidence_2017_2025.xlsx", sheet = .x)),
   map(excel_sheets("./data/incidence/incidence_bd_vt_2017_2025.xlsx"),
       ~ read_excel("./data/incidence/incidence_bd_vt_2017_2025.xlsx", sheet = .x))
 )
+
+# bind_rows(
+#   qs_read("data/cached/failed_geocode_addr.qs"),
+#   qs_read("data/cached/failed_geocoded_aug2025_df.qs"),
+#   qs_read("data/cached/failed_geocoded_bd_vt_df.qs")
+# )
+
 # ========== Check geocode old commune consistency ==========
 # Compare the consistency between:
 # 1. Manual mapping of commune names to 2023 GISvn polygons
@@ -116,7 +123,7 @@ compare_address_coordinate_mapping <- preprocess_incidence %>%
 
 ## --------- Summarize ---------
 compare_address_coordinate_mapping %>%
-  # group_by(thanh_pho_cu) %>%
+  group_by(thanh_pho_cu) %>%
   summarize(
     with_geocode = sum(!is.na(long)),
     with_coordinate_polygon = sum(!is.na(coordinate_polygon_id)),
@@ -125,9 +132,12 @@ compare_address_coordinate_mapping %>%
     matched = sum(address_polygon_id == coordinate_polygon_id, na.rm = TRUE),
     mismatched = sum(address_polygon_id != coordinate_polygon_id, na.rm = TRUE),
     cant_assign = sum(is.na(coordinate_polygon_id) & is.na(address_polygon_id)),
-    matched_prop = matched/with_geocode,
-    total = n()
-  )
+    total = n(),
+    matched_prop = matched/with_geocode
+  ) %>%
+  select(thanh_pho_cu, total, with_geocode, matched, matched_prop) %>%
+  View()
+
 # NOTE: using GISvn --> 25,404 mismatched as opposed to 33,045 mismatched
 
 # compare_address_coordinate_mapping %>%
@@ -184,17 +194,18 @@ mapped_incidence %>%
     matched = sum(matched, na.rm=TRUE),
     total = n(),
     matched_prop = (matched)/(n() - no_geocode)
-  )
-
-mapped_incidence %>%
-  filter(
-    loai_sap_nhap == "toan phan"
   ) %>%
-  select(dia_chi,
-         phuong_xa_cu, quan_huyen_cu, thanh_pho_cu,
-         diachi_api, long, lat,
-         px_moi,
-         ten_xa_cu, ten_huyen_cu, ten_xa_moi, loai_sap_nhap
-  ) %>%
-  filter(px_moi != ten_xa_moi) %>%
   View()
+
+# mapped_incidence %>%
+#   filter(
+#     loai_sap_nhap == "toan phan"
+#   ) %>%
+#   select(dia_chi,
+#          phuong_xa_cu, quan_huyen_cu, thanh_pho_cu,
+#          diachi_api, long, lat,
+#          px_moi,
+#          ten_xa_cu, ten_huyen_cu, ten_xa_moi, loai_sap_nhap
+#   ) %>%
+#   filter(px_moi != ten_xa_moi) %>%
+#   View()

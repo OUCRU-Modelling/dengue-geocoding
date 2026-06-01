@@ -133,4 +133,3 @@ incidence_hcm_aug2025 <- if(!file.exists("./data/incidence/incidence_hcm_aug2025
 } else{
   read_csv("./data/incidence/incidence_hcm_aug2025.csv")
 }
-

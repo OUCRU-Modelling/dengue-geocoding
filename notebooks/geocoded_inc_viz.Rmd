@@ -11,13 +11,14 @@ library(plotly)
 library(ggspatial)
 library(leaflet)
 library(terra)
+library(sf)
 ```
 
 Load all the data
 
 ```{r}
 # HCM (post merging) shape file
-hcmc_shps <- read_rds("../data/gadm/hcmc_shapefiles.rds")
+hcmc_shps <- read_rds("../data/shapefiles/hcmc_shapefiles.rds")
 hcmc_shp <- hcmc_shps$commune_168
 # crop out Con Dao
 cropvector_postreform <- c(106, 107.8, 10.2, 12)
@@ -138,6 +139,7 @@ ggplot() +
     guides(fill="none")
 
 geocoded_inc %>% 
+  filter(year(date_hosp)==2019) %>% 
   vis_points_map(shapedat = hcmc_shp, osm_layer = FALSE,
                  pt_size=0.3, pt_alpha=0.2)
 ```
@@ -173,6 +175,10 @@ dat_by_year$plot
 
 ```{r}
 geocoded_inc %>% 
-  filter(year(date_hosp) == 2019) %>% 
+  filter(year(date_hosp) == 2024) %>% 
   vis_points_map_leaflet(shapedat = hcmc_shp, pt_alpha=1, pt_size=2)
+```
+
+```{r}
+class(geocoded_inc)
 ```

@@ -135,16 +135,15 @@ compare_address_coordinate_mapping %>%
     total = n(),
     matched_prop = matched/with_geocode
   ) %>%
-  select(thanh_pho_cu, total, with_geocode, matched, matched_prop) %>%
-  View()
+  select(thanh_pho_cu, total, with_geocode, matched, matched_prop)
 
 # NOTE: using GISvn --> 25,404 mismatched as opposed to 33,045 mismatched
-
+# save the mismatch result here
 # compare_address_coordinate_mapping %>%
 #   filter(
 #     coordinate_polygon_id != address_polygon_id
 #   ) %>%
-#   View()
+#   writexl::write_xlsx("data/posthoc_check/mismatched_raw_api_gisvn.xlsx")
 
 
 # ========== Check geocode new commune =============
@@ -194,8 +193,7 @@ mapped_incidence %>%
     matched = sum(matched, na.rm=TRUE),
     total = n(),
     matched_prop = (matched)/(n() - no_geocode)
-  ) %>%
-  View()
+  )
 
 # mapped_incidence %>%
 #   filter(

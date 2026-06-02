@@ -1,6 +1,7 @@
 *.xls
 *.xlsx
 *.csv
+*.RDS
 cached/*
 geocoded_data/*
 geocoded_raw_inc/*

@@ -49,6 +49,30 @@ merge_gis_polygons <- list(
   "phuoc_hai" = c("phuoc_hai", "long_my")
 )
 
+# Do the same for GADM polygons
+merge_gadm_polygons <- list(
+  "tam_an" = c("an_ngai", "tam_nhut", "tam_phuoc"),
+  "phuoc_trung" = c("phuoc_trung", "phuoc_hiep"),
+  "phuoc_hoi" = c("phuoc_hoi", "loc_an"),
+  "phuoc_hai" = c("phuoc_hai", "long_my")
+)
+
+# Changes in commune level from data to GADM shape
+commune_district_crosswalk_gadm <- tribble(
+  ~city_key,          ~district_key,  ~commune_key,      ~shapefile_district_key,  ~shapefile_commune_key,
+  # "ho_chi_minh",       "2",           "binh_an",         "2",                     "an_khanh",
+  "ba_ria_-_vung_tau", "long_dat",    "dat_do",          "dat_do",                 "dat_do",
+  "ba_ria_-_vung_tau", "long_dat",    "lang_dai",        "dat_do",                 "lang_dai",
+  "ba_ria_-_vung_tau", "long_dat",    "long_tan",        "dat_do",                 "long_tan",
+  "ba_ria_-_vung_tau", "long_dat",    "phuoc_hai",       "dat_do",                 "phuoc_hai",
+  "ba_ria_-_vung_tau", "long_dat",    "phuoc_hoi",       "dat_do",                 "phuoc_hoi",
+  "ba_ria_-_vung_tau", "long_dat",    "phuoc_long_tho",  "dat_do",                 "phuoc_long_tho",
+  "ba_ria_-_vung_tau", "long_dat",    "long_hai",        "long_dien",              "long_hai",
+  "ba_ria_-_vung_tau", "long_dat",    "long_dien",       "long_dien",              "long_dien",
+  "ba_ria_-_vung_tau", "long_dat",    "phuoc_hung",      "long_dien",              "phuoc_hung",
+  "ba_ria_-_vung_tau", "long_dat",    "phuoc_tinh",      "long_dien",              "phuoc_tinh",
+)
+
 # merge_gis_polygons <- tribble(
 #   ~city_key,          ~district_key,  ~commune_key,      ~new_district_key,  ~new_commune_key,
 #   # district rename only — commune name unchanged, just remap district key

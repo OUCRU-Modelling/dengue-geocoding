@@ -145,6 +145,34 @@ compare_address_coordinate_mapping %>%
 #   ) %>%
 #   writexl::write_xlsx("data/posthoc_check/mismatched_raw_api_gisvn.xlsx")
 
+# ========== Check mapping to GADM ==========
+# Check the mapping between data and GADM
+# generate key for manual mapping
+preprocess_gadm_key <- generate_key_dat_to_gadm(
+  old_area_raw_incidence_2017_2025,
+  bind_rows(
+    hcmc_shapefiles$commune_322,
+    hcmc_shapefiles$commune_binhduong,
+    hcmc_shapefiles$commune_br_vt
+  )
+)
+
+## -------- Get communes that are in GADM but not in the data -------------
+full_join(
+  preprocess_gadm_key$dat %>%
+    select(phuong_xa_cu, quan_huyen_cu, thanh_pho_cu, ends_with("_key")) %>%
+    unique() %>%
+    arrange(city_key, district_key, commune_key) ,
+  preprocess_gadm_key$sf %>%
+    mutate(
+      polygon_id = 1:n()
+    ) %>%
+    as_tibble() %>%
+    select(name_1, name_2, name_3, polygon_id, ends_with("_key")),
+  by = c("city_key", "district_key", "commune_key"),
+  relationship = "many-to-one"
+) %>%
+  filter(is.na(phuong_xa_cu) | is.na(polygon_id))
 
 # ========== Check geocode new commune =============
 # Do the following

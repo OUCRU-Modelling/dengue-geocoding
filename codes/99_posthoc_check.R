@@ -1,3 +1,4 @@
+source("codes/00_packages.R", verbose=TRUE)
 source("R/gen_mapping_key.R")
 library(readxl)
 
@@ -145,6 +146,64 @@ compare_address_coordinate_mapping %>%
 #   ) %>%
 #   writexl::write_xlsx("data/posthoc_check/mismatched_raw_api_gisvn.xlsx")
 
+## --------- Visualize mismatch ----------
+plot_polygon_assignment <- function(row_id,
+                                    polygon_assignment, polygon_dat,
+                                    include_address=TRUE,
+                                    crs=st_crs("EPSG:4326")
+                                    ) {
+  polygon_assignment_row <- polygon_assignment[polygon_assignment$.row_id == row_id, ]
+
+  point <- polygon_assignment_row %>% st_drop_geometry() %>%
+    st_as_sf(coords = c("long", "lat"), crs=crs, remove = FALSE)
+
+  poly_addr     <- polygon_dat %>% filter(polygon_id == polygon_assignment_row$address_polygon_id)
+  poly_assigned <- polygon_dat %>% filter(polygon_id == polygon_assignment_row$coordinate_polygon_id)
+  focus         <- bind_rows(poly_addr, poly_assigned)
+  context       <- polygon_dat[unique(unlist(st_intersects(focus, polygon_dat))), ]
+
+  ggplot() +
+    geom_sf(data = context,       fill = "grey95", color = "grey75", linewidth = 0.25) +
+    geom_sf(data = poly_addr,     aes(fill = "Raw address polygon", color = "Raw address polygon"), alpha = 0.35, linewidth = 1) +
+    geom_sf(data = poly_assigned, aes(fill = "Assigned polygon",    color = "Assigned polygon"),    alpha = 0.35, linewidth = 1) +
+    geom_sf(data = point,         shape = 21, fill = "black", size = 2) +
+    scale_fill_manual( values = c("Raw address polygon" = "#2563eb", "Assigned polygon" = "#dc2626")) +
+    scale_color_manual(values = c("Raw address polygon" = "#1d4ed8", "Assigned polygon" = "#b91c1c")) +
+    coord_sf(datum = NA) +
+    labs(
+      title    = "Address versus assigned polygon",
+      subtitle = paste(
+        paste(
+          paste(poly_addr$name_3, poly_addr$name_2, sep = ", "),
+          paste(poly_assigned$name_3, poly_assigned$name_2, sep = ", "),
+          sep = " -> "
+        ),
+        if (include_address)
+          paste(paste0("Raw addr: ", polygon_assignment_row$dia_chi),
+                paste0("API addr: ", polygon_assignment_row$diachi_api),
+                sep = "\n")
+          else "",
+        sep = "\n"
+      ),
+      fill = NULL, color = NULL
+    ) +
+    theme_minimal()
+}
+
+mismatch_entries <- read_xlsx("data/posthoc_check/mismatched_raw_api_gisvn.xlsx")
+### Example 1: Point right on the border
+mismatch_entries[mismatch_entries$.row_id == 32,]
+plot_polygon_assignment(32, mismatch_entries, b4_merge_sf)
+
+### Example 2: Raw address is way off (canditates: 246, 495)
+mismatch_entries[mismatch_entries$.row_id == 495,]
+plot_polygon_assignment(495, mismatch_entries, b4_merge_sf)
+
+### Example 3: Geocoding is wrong
+mismatch_entries[mismatch_entries$.row_id == 215,]
+plot_polygon_assignment(215, mismatch_entries, b4_merge_sf)
+
+
 # ========== Check mapping to GADM ==========
 # Check the mapping between data and GADM
 # generate key for manual mapping
@@ -156,6 +215,13 @@ preprocess_gadm_key <- generate_key_dat_to_gadm(
     hcmc_shapefiles$commune_br_vt
   )
 )
+
+# preprocess_gadm_key$dat %>%
+#   select(phuong_xa_cu, quan_huyen_cu, thanh_pho_cu, ends_with("_key")) %>%
+#   unique() %>%
+#   arrange(city_key, district_key, commune_key) %>%
+#   group_by(thanh_pho_cu) %>%
+#   count()
 
 ## -------- Get communes that are in GADM but not in the data -------------
 full_join(

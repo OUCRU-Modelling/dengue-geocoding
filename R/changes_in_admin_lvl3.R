@@ -145,7 +145,7 @@ commune_district_crosswalk_2023_2025 <- tribble(
   "tp._ho_chi_minh",  "phu_nhuan",   "17",  "phu_nhuan",   "15",
   # Binh Chanh: qui_duc → hung_long
   "tp._ho_chi_minh",  "binh_chanh",  "qui_duc",  "binh_chanh", "hung_long",
-  # Ba Ria - Vung Tau
+  # Ba Ria - Vung Tau (NQ 1256, effective 1/1/2025)
   "ba_ria_-_vung_tau",  "ba_ria",    "phuoc_hiep",  "ba_ria",    "phuoc_trung",
   "ba_ria_-_vung_tau",  "long_dat",  "long_my",     "long_dat",  "phuoc_hai",
   "ba_ria_-_vung_tau",  "long_dat",  "loc_an",      "long_dat",  "phuoc_hoi",
@@ -153,9 +153,4 @@ commune_district_crosswalk_2023_2025 <- tribble(
   "ba_ria_-_vung_tau",  "long_dien", "an_ngai",     "long_dat",  "an_ngai",
   "ba_ria_-_vung_tau",  "long_dien", "an_nhut",     "long_dat",  "an_nhut",
   "ba_ria_-_vung_tau",  "long_dien", "tam_phuoc",   "long_dat",  "tam_phuoc",
-  # Changes in ba ria vung tau
-  # NQ 1256, effective 1/1/2025 — these dissolve into new units
-  "ba_ria_-_vung_tau",  "ba_ria",   "phuoc_hiep",  "ba_ria",   "phuoc_trung",
-  "ba_ria_-_vung_tau",  "dat_do",   "loc_an",      "long_dat", "phuoc_hoi",
-  "ba_ria_-_vung_tau",  "dat_do",   "long_my",     "long_dat", "phuoc_hai",
 )

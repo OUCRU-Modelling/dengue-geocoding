@@ -3,10 +3,10 @@ source("codes/00_packages.R", verbose=TRUE)
 library(readxl)
 
 # ----- Load related data ------
-incidence_dat <- read_excel("data/incidence_2017_2025_w_sim.xlsx")
+incidence_dat <- read_excel("data/incidence_2017_Dec2025_w_sim.xlsx")
 # shapefiles
-# prereform_dat <- read_rds("data/lookup_area_prereform.rds") %>%
-#   st_transform(fm_crs_set_lengthunit(st_crs("EPSG:9210"), "km"))
+prereform_dat <- read_rds("data/lookup_area_prereform.rds") %>%
+  st_transform(fm_crs_set_lengthunit(st_crs("EPSG:9210"), "km"))
 
 # only include records w/ discrepancies in address-based and coordinate-based pre-reform polygons
 assignment_distance <- incidence_dat %>%
@@ -53,7 +53,9 @@ ggplot(assignment_distance, aes(x = distance_border_km)) +
   labs(
     title = "Distribution of distance between mismatched polygons",
     x = "Distance between nearest edges (km)"
-  )
+  ) +
+  theme_minimal()
+ggsave(dpi=300, height = 5, width=8,"notebooks/distance_distribution_density.jpeg")
 
 ## Visualize distance between edges excluding neighbors-------
 assignment_distance %>%

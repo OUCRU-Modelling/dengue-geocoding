@@ -6,7 +6,8 @@ source("R/gisvn_api.R")
 
 geocoded_addr <- qs_read("data/cached/geocoded_addr.qs")
 
-# -------- Preprocess geocoded addresses ---------
+# ========== Preprocess geocoded addresses ============
+# --------- Ho Chi Minh data before merge --------------
 # minor refactoring for clarity
 geocoded_addr <- geocoded_addr %>%
   rename(
@@ -50,7 +51,7 @@ gis_new_addr <- gis_new_addr %>%
     )
   )
 
-# -------- Get clean geocoded addr ---------
+#  Get clean geocoded addr
 geocoded_addr_clean <- bind_rows(
     gis_new_addr,
     vietmap_new_addr
@@ -64,5 +65,24 @@ geocoded_addr_clean <- bind_rows(
   )
 
 qs_save(geocoded_addr_clean, "./data/cached/geocoded_addr_clean.qs")
+
+# --------- Ba Ria - Vung Tau and Binh Duong data before merge ----------
+geocoded_bd_vt <- qs_read("data/cached/geocoded_bd_vt_df.qs")
+
+geocoded_bd_vt_clean <- geocoded_bd_vt %>%
+  rename(
+    vietmap_commune_id = vietmap_ward_id,
+    vietmap_commune = vietmap_ward
+  ) %>%
+  mutate(
+    new_addr_split = str_split(display_alt, "(Phường |Xã )"),
+    new_commune = map_chr(new_addr_split, \(addr){addr[length(addr)]}),
+    new_commune_split = str_split(new_commune, ","),
+    new_commune = map_chr(new_commune_split, \(addr){addr[1]}),
+    new_province = map_chr(new_commune_split, \(addr){addr[2]})
+  ) %>%
+  select(-new_addr_split, -new_commune_split, -display_alt)
+
+qs_save(geocoded_bd_vt_clean, "./data/cached/geocoded_bd_vt_clean.qs")
 
 

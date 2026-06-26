@@ -95,7 +95,12 @@ clean_xlsx <- function(df,
           "",
           paste0(if(prefix) ", Phường " else ", ", px)
         ),
-        if(prefix) ", Quận " else ", ", qh
+        if(prefix) ", Quận " else ", ",
+        if_else(
+          is.na(qh),
+          "",
+          qh
+        )
         # geocode better without specifying HCM city sumhow
         # ", Thành Phố Hồ Chí Minh"
       ),

@@ -11,27 +11,46 @@ library(plotly)
 library(ggspatial)
 library(leaflet)
 library(terra)
+library(sf)
 ```
 
 Load all the data
 
 ```{r}
-# HCM shape file
-hcmc_shps <- read_rds("../data/gadm/shapefiles_hcmc_pre_reform.RDS")
-hcmc_shp <- hcmc_shps$urban_unit %>% 
-  filter(!(name_2 == "Outside HCMC"))
+# HCM (post merging) shape file
+hcmc_shps <- read_rds("../data/shapefiles/hcmc_shapefiles.rds")
+hcmc_shp <- hcmc_shps$commune_168
+# crop out Con Dao
+cropvector_postreform <- c(106, 107.8, 10.2, 12)
 
 # use WGS84 projection is is required by leaflet later on
-hcmc_shp <- st_transform(hcmc_shp, "EPSG:4326")
+hcmc_shp <- st_transform(hcmc_shp, "EPSG:4326") %>% 
+  st_crop(
+    xmin = cropvector_postreform[1],
+    xmax = cropvector_postreform[2],
+    ymin = cropvector_postreform[3],
+    ymax = cropvector_postreform[4]
+  )
 
 # geocoded incidence
 datapath <- "../data/geocoded_data/"
-geocoded_inc <- list.files(datapath, full.names=TRUE) %>% 
+geocoded_inc <- list.files(datapath, full.names=TRUE, recursive = TRUE) %>% 
   map(\(f){read_rds(f)}) %>% 
   bind_rows()
 
-hcmc_shps$boundary_hcmc %>% 
+hcmc_shps$boundary_pre_reform %>% 
   st_transform("EPSG:4326") %>% 
+  ggplot() +
+    geom_sf()
+
+hcmc_shps$boundary_post_reform %>% 
+  st_transform("EPSG:4326") %>% 
+  st_crop(
+    xmin = cropvector_postreform[1],
+    xmax = cropvector_postreform[2],
+    ymin = cropvector_postreform[3],
+    ymax = cropvector_postreform[4]
+  ) %>% 
   ggplot() +
     geom_sf()
 ```
@@ -47,7 +66,7 @@ vis_points_map <- function(dat, shapedat,
   vis_in <- dat %>% 
     st_transform(crs = st_crs(shapedat)) %>% 
     st_join(shapedat, join = st_within) %>%
-    filter(!is.na(gid_2))
+    filter(!is.na(name_2))
   
   out <- ggplot()
   
@@ -71,7 +90,7 @@ vis_points_map_leaflet <- function(dat, shapedat,
   vis_in <- dat %>% 
     st_transform(crs = st_crs(shapedat)) %>% 
     st_join(shapedat, join = st_within) %>%
-    filter(!is.na(gid_2))
+    filter(!is.na(name_2))
   
   out <- leaflet(options = leafletOptions(
     minZoom = 10
@@ -120,6 +139,7 @@ ggplot() +
     guides(fill="none")
 
 geocoded_inc %>% 
+  filter(year(date_hosp)==2019) %>% 
   vis_points_map(shapedat = hcmc_shp, osm_layer = FALSE,
                  pt_size=0.3, pt_alpha=0.2)
 ```
@@ -143,7 +163,8 @@ dat_by_year <- geocoded_inc %>%
             title = paste0("Dengue incidence in ", year)
           )
     })
-  )
+  ) %>% 
+  arrange(hosp_year)
 ```
 
 ```{r}
@@ -154,6 +175,10 @@ dat_by_year$plot
 
 ```{r}
 geocoded_inc %>% 
-  filter(year(date_hosp) == 2019) %>% 
+  filter(year(date_hosp) == 2024) %>% 
   vis_points_map_leaflet(shapedat = hcmc_shp, pt_alpha=1, pt_size=2)
+```
+
+```{r}
+class(geocoded_inc)
 ```

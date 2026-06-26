@@ -3,6 +3,8 @@ title: "Export proportion of geocoded data per commune"
 output: html_document
 ---
 
+NOTE: this file is deprecated, refer to `codes/99_posthoc_check.R` instead
+
 ```{r}
 library(tidyverse)
 library(qs2)

@@ -10,7 +10,8 @@ library(sf)
 
 # ==== Util funcs =====
 # geocode by batch of batch_size with sleep time in between batches
-geocode_by_batch <- function(x, batch_size=5, sleep=1){
+geocode_by_batch <- function(x, batch_size=5, sleep=1,
+                             city_id=12){
   indices <- seq(1, length(x), batch_size)
   # generate pointers/indices for each batch
   start <- indices
@@ -23,7 +24,7 @@ geocode_by_batch <- function(x, batch_size=5, sleep=1){
                method = "vietmap",
                custom_query = list(
                  "display_type" = 6,
-                 "cityId"=12
+                 "cityId"=city_id
                ),
                full_results = TRUE,
                unique_only = FALSE,
@@ -157,13 +158,15 @@ geocode_manual <- function(df,
 # limit: max no. of addresses to be geocoded via API call per geocode_df() call
 # batch: no. addresses per tidygeocoder::geo() call. Vietmap API may need "cool down" time per 100ish requests (free tier).
 # sleep: sleep time between batches (in seconds)
+# city_id: a city ID from VietMap for filtering result
 geocode_df <- function(df,
                          cache_path,
                          failed_cache_path,
                          colname = "raw_addr",
                          limit=200,
                          batch = 100,
-                         sleep = 60
+                         sleep = 60,
+                         city_id = 12
                          ){
     # ----- Load cache ------
     cached_dat <- if(file.exists(cache_path)){
@@ -209,7 +212,10 @@ geocode_df <- function(df,
     out <- to_geocode %>%
       head(n = limit) %>%
       pull(any_of(colname)) %>%
-      geocode_by_batch(batch_size=batch, sleep=sleep)
+      geocode_by_batch(
+        batch_size=batch,
+        sleep=sleep,
+        city_id=city_id)
 
     # only cache addresses that were successfully geocoded
     success <- out %>% filter(!is.na(long), !is.na(lat))

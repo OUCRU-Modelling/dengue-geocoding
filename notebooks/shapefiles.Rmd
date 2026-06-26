@@ -1,0 +1,390 @@
+---
+title: "HCMC, Ba Ria - Vung Tau, Binh Duong shapefiles"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(sf)
+library(terra)
+library(janitor)
+library(stringi)
+library(readxl)
+```
+
+Check the shapefiles from HCMC, Ba Ria - Vung Tau
+
+```{r}
+# Helper functions
+
+# generate joining key for px, qh name
+make_key <- function(x) {
+  x %>% 
+    str_trim() %>% 
+    stri_trans_general("Latin-ASCII") %>% 
+    str_to_lower() %>% 
+    str_replace_all("\\s+", "_")
+}
+
+# handle sap_nhap column to get a map from old commune to new commune
+parse_merge_fr <- function(sap_nhap_str, ten_xa_moi) {
+  entries <- str_split(sap_nhap_str, ",\\s*(?![^(]*\\))")[[1]]
+  
+  map_dfr(entries, function(entry) {
+    entry <- str_trim(entry)
+    
+    # extract all tokens inside parentheses, split by comma
+    paren_content <- str_extract(entry, "(?<=\\()([^)]+)(?=\\))")
+    tokens <- if (!is.na(paren_content)) str_trim(str_split(paren_content, ",")[[1]]) else character(0)
+    
+    # classify each token
+    is_partial    <- any(str_detect(tokens, "(?i)^1 ph[aầ]n$"))
+    district_token <- tokens %>% 
+          keep(~ str_detect(.x, "(?i)^(qu[aậ]n|huy[eệ]n|th[iị] x[aã]|th[àa]nh ph[oố])"))  %>% 
+  str_remove("(?i)^(qu[aậ]n|huy[eệ]n|th[iị] x[aã]|th[àa]nh ph[oố])\\s+")
+    
+    tibble(
+      ten_xa_cu     = str_remove_all(entry, "\\s*\\([^)]*\\)") %>%  str_trim(),
+      ten_huyen_cu   = if (length(district_token) > 0) district_token[[1]] else NA_character_,
+      ten_xa_moi    = ten_xa_moi,
+      loai_sap_nhap = if_else(is_partial, "1 phan", "toan phan")
+    )
+  }) 
+}
+```
+
+## Shape files
+
+```{r}
+hcmc_shapefiles <- read_rds("../data/gadm/hcmc_shapefiles.rds")
+```
+
+### GISvn
+
+Map after the 2021 reform
+
+```{r}
+commune_gis <- read_sf("../data/shapefiles/before_reforms/gisvn_vnm_shp/Việt Nam (phường xã) - 63.shp", options = "ENCODING=UTF-8") %>% 
+  clean_names() 
+
+commune_gis <- commune_gis %>% 
+  filter(
+    ten_tinh == "TP. Hồ Chí Minh" |
+    ten_tinh == "Bà Rịa - Vũng Tàu" |
+    ten_tinh == "Bình Dương"
+  ) %>% 
+  mutate(
+    ten_xa = str_remove(ten_xa, "^0+(?=[1-9])")
+  )
+```
+
+```{r}
+commune_gis %>% 
+  group_by(ten_tinh) %>% 
+  summarize(
+    no_commune = n()
+  )
+```
+
+### Get the standard name
+
+Create a data.frame with the standard commune names and a mapping to new communes
+
+```{r}
+commune_names_gis <- commune_gis %>% 
+  as_tibble() %>% 
+  select(-cap, -stt, -geometry) %>% 
+  arrange(ten_tinh)
+```
+
+```{r}
+commune_merged <- read_sf("../data/shapefiles/after_2025_reforms/Việt Nam (phường xã) - 34/", options = "ENCODING=UTF-8") %>% 
+  clean_names() %>% 
+  filter(
+    ten_tinh == "TP. Hồ Chí Minh" 
+  ) 
+  
+commune_names_merged <- commune_merged %>% 
+  as_tibble() %>% 
+  select(ma_xa, ten_xa, sap_nhap, loai, ma_tinh)
+```
+
+Generate a data.frame mapping from old commune to new commune
+
+```{r}
+old_to_new_map <- commune_names_merged  %>% 
+  select(ten_xa, sap_nhap)  %>% 
+  pmap_dfr(~ parse_merge_fr(..2, ..1)) %>% 
+  ungroup() %>% 
+  mutate(
+    ten_xa_cu = str_remove(ten_xa_cu, "Phường\\s+")
+  )
+
+# save a csv to adjust manually
+# write_csv(old_to_new_map, "../data/shapefiles/for_HCDC/px_cu_moi_map.csv")
+
+old_to_new_map <- read_csv("../data/shapefiles/for_HCDC/px_cu_moi_map.csv") %>% 
+  mutate(
+    key_xa_cu = make_key(ten_xa_cu),
+    key_huyen_cu = make_key(ten_huyen_cu)
+  )
+```
+
+Finally, merge to get the full details of old and new communes
+
+```{r}
+# ---- add details of old communes
+old_new_map_full <- bind_rows(
+  old_to_new_map %>%  
+    filter(!is.na(ten_huyen_cu)) %>%  
+    left_join(commune_names_gis %>% 
+                select(-loai) %>%
+                mutate(
+                  ten_huyen = make_key(ten_huyen),
+                  ten_xa = make_key(ten_xa)
+                ) %>% 
+                rename(
+                  ma_xa_cu = ma_xa,
+                  ma_huyen_cu = ma_huyen,
+                  ma_tinh_cu = ma_tinh,
+                  ten_tinh_cu = ten_tinh
+                ), 
+              by = join_by(
+                key_huyen_cu == ten_huyen,
+                key_xa_cu == ten_xa)
+              ),
+  old_to_new_map %>%  
+    filter(is.na(ten_huyen_cu)) %>%  
+    select(-ten_huyen_cu) %>% 
+    left_join(commune_names_gis %>% 
+                select(-loai) %>% 
+                mutate(
+                  ten_xa = make_key(ten_xa)
+                ) %>%
+                rename(
+                  ma_xa_cu = ma_xa,
+                  ten_huyen_cu = ten_huyen,
+                  ma_huyen_cu = ma_huyen,
+                  ten_tinh_cu = ten_tinh,
+                  ma_tinh_cu = ma_tinh
+                ), 
+              by = join_by(key_xa_cu == ten_xa)
+              )
+)
+
+# ---- add details of new communes
+old_new_map_full <- old_new_map_full %>% 
+  left_join(
+    commune_names_merged %>% 
+      select(ma_xa, ten_xa) %>% 
+      rename(
+        ten_xa_moi = ten_xa,
+        ma_xa_moi = ma_xa
+      )
+  ) %>% 
+  select(
+    ten_xa_cu, ma_xa_cu, ten_huyen_cu, ma_huyen_cu, ten_tinh_cu, ma_tinh_cu,
+    ten_xa_moi, ma_xa_moi, loai_sap_nhap
+  )
+```
+
+Write necessary files
+
+```{r}
+write_csv(old_new_map_full, "../data/shapefiles/for_HCDC/px_cu_moi.csv")
+shp_files <- list(
+  before_merge = commune_gis,
+  after_merge = commune_2025
+)
+write_rds(shp_files, "../data/shapefiles/for_HCDC/new_hcm_shapefiles.rds")
+shp_files$before_merge
+shp_files$after_merge
+```
+
+Save communes that exists in shapefile but **NOT** in old to new mapping
+
+This mean that these communes were changed during the 2023-2025 period
+
+-   Example: Q8 as detailed [here](https://ghtk.vn/blog/phuong-1-quan-8-sap-nhap/)
+
+```{r}
+commune_gis %>% 
+  as_tibble() %>% 
+  select(ma_xa, ten_xa, ten_huyen, ma_huyen, ten_tinh, ma_tinh) %>% 
+  left_join(
+    old_new_map_full %>% 
+      select(ma_xa_cu, ten_xa_cu),
+    by = join_by(ma_xa == ma_xa_cu)
+  ) %>% 
+  filter(is.na(ten_xa_cu)) %>% 
+  select(-ten_xa_cu) %>% 
+  arrange(ten_tinh, ten_huyen, ten_xa) %>% 
+  write_csv("../data/shapefiles/for_HCDC/thay_doi_trong_2023_2025.csv")
+```
+
+## Incidence data
+
+```{r}
+old_area_raw_incidence_2017_2025 <- bind_rows(
+  map(excel_sheets("../data/incidence/incidence_2017_2025.xlsx"),
+      ~ read_excel("../data/incidence/incidence_2017_2025.xlsx", sheet = .x)),
+  map(excel_sheets("../data/incidence/incidence_bd_vt_2017_2025.xlsx"),
+      ~ read_excel("../data/incidence/incidence_bd_vt_2017_2025.xlsx", sheet = .x))
+)
+```
+
+## Helper functions
+
+```{r}
+source("../R/changes_in_admin_lvl3.R")
+```
+
+### Data to gis sf 
+
+```{r}
+generate_key_dat_to_2023 <- function(data, gis){
+  newdat <- data %>% 
+    mutate(
+      city_key     = make_key(thanh_pho_cu),
+      city_key     = recode(city_key, "tp._h.c.m"="tp._ho_chi_minh"),
+      city_key     = str_remove(city_key, "^tinh_"),
+      district_key = make_key(quan_huyen_cu),
+      district_key = str_remove(district_key, "^(quan_|huyen_|thanh_pho_)"),
+      commune_key  = make_key(phuong_xa_cu),
+      commune_key = str_remove(commune_key, "^(phuong_|xa_|thi_tran_)")
+    ) %>% 
+    group_by(commune_key, district_key, city_key) %>% 
+    # ------ handle changes in district/commune between data & 2023 GIS sf --------
+    left_join(commune_district_crosswalk_2023,
+              by = c("city_key", "district_key", "commune_key"),
+              relationship = "many-to-one") %>% 
+    mutate(
+      district_key = coalesce(shapefile_district_key, district_key),
+      commune_key = coalesce(shapefile_commune_key, commune_key)
+    )
+  
+  newgis <- gis %>% 
+    mutate(
+      city_key     = make_key(ten_tinh),
+      district_key = make_key(ten_huyen),
+      commune_key  = make_key(ten_xa)
+    ) %>% 
+    hcmc_shapefiles$merge_polygon(
+      merge_map = merge_gis_polygons,
+      colname = "commune_key"
+    ) %>% 
+    # special handling for tam_an
+    mutate(
+      city_key = if_else(commune_key == "tam_an", 
+                         "ba_ria_-_vung_tau",
+                         city_key),
+      district_key = if_else(commune_key == "tam_an", 
+                         "long_dat",
+                         district_key)
+    )
+  
+  list(
+    dat = newdat,
+    sf = newgis
+  )
+}
+```
+
+Test joining modified incidence and shapefile
+
+```{r}
+test_merge <- generate_dat_to_gissf(
+  old_area_raw_incidence_2017_2025,
+  shp_files$before_merge
+)
+
+full_join(
+  test_merge$dat %>% 
+    select(city_key, district_key, commune_key) %>% 
+    unique(),
+  test_merge$sf,
+  by = c("city_key", "district_key", "commune_key"),
+  relationship = "many-to-one"
+)
+```
+
+```{r}
+full_join(
+  test_merge$dat,
+  test_merge$sf,
+  by = c("city_key", "district_key", "commune_key"),
+  relationship = "many-to-one"
+)
+```
+
+### Data to new commune 
+
+```{r}
+generate_key_dat_to_2025 <- function(data, 
+                                     sf_dat){
+  newdat <- data %>% 
+    mutate(
+      city_key     = make_key(thanh_pho_cu),
+      city_key     = recode(city_key, "tp._h.c.m"="tp._ho_chi_minh"),
+      city_key     = str_remove(city_key, "^tinh_"),
+      district_key = make_key(quan_huyen_cu),
+      district_key = str_remove(district_key, "^(quan_|huyen_|thanh_pho_)"),
+      commune_key  = make_key(phuong_xa_cu),
+      commune_key = str_remove(commune_key, "^(phuong_|xa_|thi_tran_)")
+    ) %>% 
+    group_by(commune_key, district_key, city_key) %>% 
+    # ------ step 1: map data district/commune to 2023 GIS sf key --------
+    left_join(commune_district_crosswalk_2023,
+              by = c("city_key", "district_key", "commune_key"),
+              relationship = "many-to-one") %>% 
+    mutate(
+      district_key = coalesce(shapefile_district_key, district_key),
+      commune_key = coalesce(shapefile_commune_key, commune_key)
+    ) %>% 
+    # ------ step 2: map data from 2023 key to 2025 GIS sf key -------
+    left_join(commune_district_crosswalk_2023_2025,
+              by = c("city_key", "district_key", "commune_key"),
+              relationship = "many-to-one") %>% 
+    mutate(
+      district_key = coalesce(new_district_key, district_key),
+      commune_key = coalesce(new_commune_key, commune_key)
+    ) 
+  
+  list(
+    dat = newdat,
+    sf = sf_dat
+  )
+}
+```
+
+Try mapping from commune/district in incidence data to a commune after merge
+
+-   If all 3 keys (commune, district, city) r available –\> join by all 3 keys
+
+-   Otherwise, fall back to joining using commune only
+
+```{r}
+test_merge <- generate_key_dat_to_2025(old_area_raw_incidence_2017_2025, 
+                                       old_new_map_full)
+
+map_full_keyed <- old_new_map_full %>%
+  mutate(
+    commune_key  = make_key(ten_xa_cu),
+    district_key = make_key(ten_huyen_cu),
+    city_key     = make_key(ten_tinh_cu)
+  )
+
+three_key <- test_merge$dat %>% 
+  select(city_key, district_key, commune_key) %>% 
+  unique() %>% 
+  left_join(map_full_keyed %>% filter(!is.na(district_key), !is.na(city_key)),
+            by = c("city_key", "district_key", "commune_key"))
+
+bind_rows(
+  three_key %>% filter(!is.na(ten_xa_cu)),  # matched
+  three_key %>% filter( is.na(ten_xa_cu)) %>%  # unmatched → try fallback
+    select(city_key, district_key, commune_key) %>%
+    left_join(map_full_keyed %>% filter(is.na(district_key), is.na(city_key)) %>%
+                select(-city_key, -district_key), by = "commune_key")
+)
+```

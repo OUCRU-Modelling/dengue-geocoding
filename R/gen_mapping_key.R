@@ -140,7 +140,7 @@ generate_key_dat_to_gadm <- function(data,
   )
 }
 
-
+# generate mapping key from the raw commune in incidence data (pre-reform) to commune after 2025 reform
 generate_key_dat_to_2025 <- function(data,
                                      old_new_map){
   newdat <- data %>%
@@ -179,5 +179,67 @@ generate_key_dat_to_2025 <- function(data,
         district_key = make_key(ten_huyen_cu),
         city_key     = make_key(ten_tinh_cu)
       )
+  )
+}
+
+generate_key_dat_to_2023_v2 <- function(data,
+                                     gis=hcmc_shapefiles$commune_312){
+  newdat <- data %>%
+    mutate(
+      city_key     = make_key(old_city),
+      # recode data to be consistent with shapefile
+      city_key     = recode(city_key, "tp._h.c.m"="tp._ho_chi_minh"),
+      city_key     = recode(city_key, "thanh_pho_ho_chi_minh"="tp._ho_chi_minh"),
+      city_key     = str_remove(city_key, "^tinh_"),
+      city_key     = recode(city_key, "ba_ria-vung_tau"="ba_ria_-_vung_tau"),
+      district_key = make_key(old_district),
+      # recode data to be consistent with shapefile
+      district_key = str_remove(district_key, "^(quan_|huyen_|thanh_pho_)"),
+      commune_key  = make_key(old_commune_ward),
+      commune_key = str_remove(commune_key, "^(phuong_|xa_|thi_tran_)"),
+      commune_key  = recode(commune_key, "cay_truong_2"="cay_truong_ii")
+    ) %>%
+    group_by(commune_key, district_key, city_key) %>%
+    # ------ handle changes in district/commune between data & 2023 GIS sf --------
+  left_join(commune_district_crosswalk_2023,
+            by = c("city_key", "district_key", "commune_key"),
+            relationship = "many-to-one") %>%
+    mutate(
+      district_key = coalesce(shapefile_district_key, district_key),
+      commune_key = coalesce(shapefile_commune_key, commune_key)
+    )
+
+  newgis <- gis %>%
+    mutate(
+      city_key     = make_key(name_1),
+      district_key = make_key(name_2),
+      commune_key  = make_key(name_3)
+    ) %>%
+    hcmc_shapefiles$merge_polygon(
+      merge_map = merge_gis_polygons,
+      colname = "commune_key"
+    ) %>%
+    # special handling for tam_an
+    mutate(
+      city_key = if_else(commune_key == "tam_an",
+                         "ba_ria_-_vung_tau",
+                         city_key),
+      district_key = if_else(commune_key == "tam_an",
+                             "long_dat",
+                             district_key),
+      name_1 = if_else(commune_key == "tam_an",
+                       "Bà Rịa - Vũng Tàu",
+                       name_1),
+      name_2 = if_else(commune_key == "tam_an",
+                       "Long Đất",
+                       name_2),
+      name_3 = if_else(commune_key == "tam_an",
+                       "Tam An",
+                       name_3)
+    )
+
+  list(
+    dat = newdat,
+    sf = newgis
   )
 }

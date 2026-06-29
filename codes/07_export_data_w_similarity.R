@@ -240,7 +240,46 @@ low_similarity_geocodes_old_area <- dat_address_coordinate_sim %>%
 #   print(raw_api_similarity_plot)
 # }
 
-## ======= Step 7: Map incidence to new area ==========
+## ======= Step 7: Compute distance for mismatched polygon assignment ==========
+discrepancies_distance <- dat_address_coordinate_sim %>%
+  select(.row_id, id_space_lvl3_address, id_space_lvl3_coordinate) %>%
+  filter(!is.na(id_space_lvl3_address), !is.na(id_space_lvl3_coordinate)) %>%
+  filter(id_space_lvl3_address != id_space_lvl3_coordinate) %>%
+  left_join(
+    old_area_lookup %>%
+      st_transform(fm_crs_set_lengthunit(st_crs("EPSG:9210"), "km")) %>%
+      select(id_space_lvl3) %>%
+      rename(
+        geometry_addr = geometry
+      ),
+    by = join_by(id_space_lvl3_address == id_space_lvl3)
+  ) %>%
+  left_join(
+    old_area_lookup %>%
+      st_transform(fm_crs_set_lengthunit(st_crs("EPSG:9210"), "km")) %>%
+      select(id_space_lvl3) %>%
+      rename(
+        geometry_coord = geometry
+      ),
+    by = join_by(id_space_lvl3_coordinate == id_space_lvl3)
+  ) %>%
+  mutate(
+    distance_km = map2_dbl(
+      geometry_addr,
+      geometry_coord,
+      \(a, b) st_distance(a, b)
+    )
+  )
+
+# merge the result back
+dat_address_coordinate_sim <- dat_address_coordinate_sim %>%
+  left_join(
+    discrepancies_distance %>%
+      st_drop_geometry() %>%
+      select(.row_id, distance_km)
+  )
+
+## ======= Step 8: Map incidence to new area ==========
 # dat_address_coordinate_sim %>%
 #   summarize(
 #     total = n(),

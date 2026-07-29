@@ -523,6 +523,10 @@ dat_polygon_finalized_2 <- dat_polygon_finalized %>%
     by = ".row_id"
   ) %>%
   mutate(id_space_lvl3_postreform = coalesce(id_space_lvl3_postreform_final, id_space_lvl3_postreform)) %>%
+  left_join(
+    postreform_lookup %>% st_drop_geometry() %>%
+      select(id_space_lvl3_postreform, postreform_origin_area)
+  ) |>
   select(-id_space_lvl3_postreform_final) %>%
   anti_join(mismatch_hcmc_only, by = ".row_id")
 

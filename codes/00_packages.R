@@ -15,3 +15,4 @@ hcmc_extent <- ext(cropvector)
 
 #VN projection
 kmproj <- fm_crs_set_lengthunit(st_crs("EPSG:9210"), "km")
+

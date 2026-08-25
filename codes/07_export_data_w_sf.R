@@ -43,6 +43,7 @@ old_area_incidence_selected <- old_area_raw_incidence_2017_2025 %>%
     date_of_symptom = ngay_khoi_phat_trieu_chung,
     date_hosp = ngay_nhap_vien_kham_benh,
     date_of_report = ngay_bao_cao,
+    diagnostic_classification = phan_loai_chan_doan,
     year = nam,
     month = thang,
     old_district = quan_huyen_cu,
@@ -58,17 +59,19 @@ old_area_incidence_selected <- old_area_raw_incidence_2017_2025 %>%
     # incidence workbooks.
     new_commune_ward = coalesce(new_commune_ward, phuong_xa_moi)
   ) %>%
-  select(
-    address_inputted,
-    old_city,
-    old_district,
-    old_commune_ward,
-    date_hosp,
-    api_address,
-    longitude,
-    latitude,
-    new_commune_ward
-  )
+  select(-phuong_xa_moi) %>%
+  # select(
+  #   address_inputted,
+  #   old_city,
+  #   old_district,
+  #   old_commune_ward,
+  #   date_hosp,
+  #   api_address,
+  #   longitude,
+  #   latitude,
+  #   new_commune_ward
+  # ) |>
+  {.}
 
 
 ## Step 3: create row-stable join keys from the source labels. --------
@@ -571,11 +574,27 @@ saveRDS(postreform_lookup %>%
           select(-ends_with("_key")),
         "data/lookup_area_postreform.rds")
 
+# write_xlsx(
+#   dat_address_coordinate_sim %>%
+#     select(-.row_id, -id_space_lvl3_postreform_ascii, -postreform_match_method,
+#            -address_district, -address_commune,
+#            -exact_mapping_key, -ascii_mapping_key,
+#            -coordinate_district, -coordinate_commune),
+#   "data/incidence_2017_2025_w_sim.xlsx")
+
+## ------ .xlsx incidence -----------
+# The xlsx consists of the following
+# - Raw data columns
+# - Geocoded line addresses and coordinates
+# - Finalized pre-reform and post-reform commune ward assignment (between raw data vs geocoded data)
 write_xlsx(
-  dat_address_coordinate_sim %>%
+  dat_polygon_finalized_2 |>
     select(-.row_id, -id_space_lvl3_postreform_ascii, -postreform_match_method,
-           -address_district, -address_commune,
-           -exact_mapping_key, -ascii_mapping_key,
-           -coordinate_district, -coordinate_commune),
-  "data/incidence_2017_2025_w_sim.xlsx")
+                      -id_space_lvl3_address, -id_space_lvl3_coordinate,
+                      -address_district, -address_commune,
+                      -exact_mapping_key, -ascii_mapping_key,
+                      -similarity, -distance_km, -postreform_origin_area,
+                      -coordinate_district, -coordinate_commune),
+  "data/incidence_2017_2025_3areas.xlsx"
+)
 

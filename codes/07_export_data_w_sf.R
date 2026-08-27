@@ -5,6 +5,7 @@ source("codes/00_packages.R", verbose=TRUE)
 source("R/gen_mapping_key.R")
 library(readxl)
 library(stringdist)
+library(tidylog)
 
 # CRS definitions ----------------------------------------------------------
 # Keep all sf objects in the raw longitude/latitude CRS used by the incidence
@@ -42,6 +43,7 @@ old_area_incidence_selected <- old_area_raw_incidence_2017_2025 %>%
     date_of_symptom = ngay_khoi_phat_trieu_chung,
     date_hosp = ngay_nhap_vien_kham_benh,
     date_of_report = ngay_bao_cao,
+    diagnostic_classification = phan_loai_chan_doan,
     year = nam,
     month = thang,
     old_district = quan_huyen_cu,
@@ -57,17 +59,19 @@ old_area_incidence_selected <- old_area_raw_incidence_2017_2025 %>%
     # incidence workbooks.
     new_commune_ward = coalesce(new_commune_ward, phuong_xa_moi)
   ) %>%
-  select(
-    address_inputted,
-    old_city,
-    old_district,
-    old_commune_ward,
-    date_hosp,
-    api_address,
-    longitude,
-    latitude,
-    new_commune_ward
-  )
+  select(-phuong_xa_moi) %>%
+  # select(
+  #   address_inputted,
+  #   old_city,
+  #   old_district,
+  #   old_commune_ward,
+  #   date_hosp,
+  #   api_address,
+  #   longitude,
+  #   latitude,
+  #   new_commune_ward
+  # ) |>
+  {.}
 
 
 ## Step 3: create row-stable join keys from the source labels. --------
@@ -240,13 +244,46 @@ low_similarity_geocodes_old_area <- dat_address_coordinate_sim %>%
 #   print(raw_api_similarity_plot)
 # }
 
-## ======= Step 7: Map incidence to new area ==========
-# dat_address_coordinate_sim %>%
-#   summarize(
-#     total = n(),
-#     missing_new_commune = sum(is.na(new_commune_ward), na.rm = TRUE)
-#   )
+## ======= Step 7: Compute distance for mismatched polygon assignment ==========
+discrepancies_distance <- dat_address_coordinate_sim %>%
+  select(.row_id, id_space_lvl3_address, id_space_lvl3_coordinate) %>%
+  filter(!is.na(id_space_lvl3_address), !is.na(id_space_lvl3_coordinate)) %>%
+  filter(id_space_lvl3_address != id_space_lvl3_coordinate) %>%
+  left_join(
+    old_area_lookup %>%
+      st_transform(fm_crs_set_lengthunit(st_crs("EPSG:9210"), "km")) %>%
+      select(id_space_lvl3) %>%
+      rename(
+        geometry_addr = geometry
+      ),
+    by = join_by(id_space_lvl3_address == id_space_lvl3)
+  ) %>%
+  left_join(
+    old_area_lookup %>%
+      st_transform(fm_crs_set_lengthunit(st_crs("EPSG:9210"), "km")) %>%
+      select(id_space_lvl3) %>%
+      rename(
+        geometry_coord = geometry
+      ),
+    by = join_by(id_space_lvl3_coordinate == id_space_lvl3)
+  ) %>%
+  mutate(
+    distance_km = map2_dbl(
+      geometry_addr,
+      geometry_coord,
+      \(a, b) st_distance(a, b)
+    )
+  )
 
+# merge the result back
+dat_address_coordinate_sim <- dat_address_coordinate_sim %>%
+  left_join(
+    discrepancies_distance %>%
+      st_drop_geometry() %>%
+      select(.row_id, distance_km)
+  )
+
+## ======= Step 8: Map incidence to new area ==========
 postreform_lookup <- hcmc_shapefiles$commune_168 %>%
   rename(
     id_space_lvl3_postreform = id_2
@@ -321,21 +358,8 @@ dat_address_coordinate_sim <- dat_address_coordinate_sim %>%
   )
 
 
-# dat_address_coordinate_sim %>%
-#   mutate(
-#     time_line = if_else(date_hosp < as.Date("2025-08-01"),
-#                         "prereform",
-#                         "postreform")
-#   ) %>%
-#   group_by(time_line) %>%
-#   summarize(
-#     no_old_area = sum(is.na(id_space_lvl3_address) & is.na(id_space_lvl3_coordinate)),
-#     no_new_area = sum(is.na(id_space_lvl3_postreform)),
-#     total = n()
-#   )
-
 # Save data for analysis ------------------
-# VN projection and HCMC/global spatial extent ----------------------------
+## VN projection and HCMC/global spatial extent ----------------------------
 kmproj <- fm_crs_set_lengthunit(st_crs("EPSG:9210"), "km")
 
 # Keep the crop extent in the raw lon/lat CRS because it is used to crop raw
@@ -370,7 +394,7 @@ hcmc_extent <- cropvector
 ## For postreform lookup, also check for the origin area pre-reform --------
 
 # Get the spatial extent of HCMC, Binh Duong, BR-VT pre-reform
-prereform_lvl2_boundaries<- old_area_lookup %>%
+prereform_lvl2_boundaries <- old_area_lookup %>%
   mutate(
     postreform_origin_area = make_key(name_1),
     postreform_origin_area = case_when(
@@ -397,6 +421,124 @@ postreform_origin_lookup <- postreform_lookup %>%
 postreform_lookup <- postreform_lookup  %>%
   left_join(postreform_origin_lookup, by = "id_space_lvl3_postreform", relationship = "one-to-one")
 
+
+## Finalize polygon assignment -----------
+### Finalize pre-reform polygon assignment -----------
+dat_polygon_finalized <- dat_address_coordinate_sim |>
+  mutate(
+    id_space_lvl3 = case_when(
+      is.na(id_space_lvl3_address) ~ id_space_lvl3_coordinate,
+      !is.na(distance_km) & distance_km <= 2 ~ id_space_lvl3_coordinate,
+      TRUE ~ id_space_lvl3_address
+    )
+  )
+  # select(-id_space_lvl3_coordinate, -id_space_lvl3_address)
+
+# Sanity check
+nrow(dat_polygon_finalized) == nrow(old_area_raw_incidence_2017_2025)
+# id_space_lvl3 should only be NA when no lvl3 assignment can be found
+sum(is.na(dat_polygon_finalized$id_space_lvl3)) == sum(
+  is.na(dat_polygon_finalized$id_space_lvl3_address) & is.na(dat_polygon_finalized$id_space_lvl3_coordinate)
+)
+
+### Finalize post-reform polygon -------------
+# For post-reform records only
+# - compare the raw address post-reform polygon (id_space_lvl3_postreform) against the geocoded polygon
+# - finalize polygon assignment based on distance
+# - drop records whose pre-reform origin areas disagrees (e.g. labeled HCMC but coordinate is in BD/BR-VT).
+
+postreform_date <- as.Date("2025-08-01")
+
+postreform_coord_points <- dat_polygon_finalized %>%
+  filter(
+    date_hosp >= postreform_date,
+    !is.na(longitude), !is.na(latitude)
+  ) %>%
+  st_as_sf(coords = c("longitude", "latitude"), crs = raw_coordinate_crs, remove = FALSE) %>%
+  st_transform(st_crs(postreform_lookup))
+
+# get the post-reform polygon using coordinate
+postreform_coord_hits <- st_covered_by(postreform_coord_points, postreform_lookup)
+
+# this create a mapping table containing
+# row_id, postreform lvl3 id based on raw addr vs coordinate
+postreform_coord_mapping <- postreform_coord_points %>%
+  st_drop_geometry() %>%
+  select(.row_id, id_space_lvl3_postreform) %>%
+  mutate(
+    id_space_lvl3_postreform_coord = map_chr(
+      postreform_coord_hits,
+      \(hit) if (length(hit) == 1L) postreform_lookup$id_space_lvl3_postreform[hit] else NA_character_
+    )
+  )
+
+# check rows with mismatched postreform lvl3 id
+sum(postreform_coord_mapping$id_space_lvl3_postreform != postreform_coord_mapping$id_space_lvl3_postreform_coord, na.rm=TRUE)
+
+# Distance between address- and coordinate-derived polygons, mismatches only
+postreform_lookup_km <- postreform_lookup %>%
+  st_transform(kmproj) %>%
+  select(id_space_lvl3_postreform)
+
+postreform_discrepancies_distance <- postreform_coord_mapping %>%
+  filter(
+    !is.na(id_space_lvl3_postreform), !is.na(id_space_lvl3_postreform_coord),
+    id_space_lvl3_postreform != id_space_lvl3_postreform_coord
+  ) %>%
+  left_join(postreform_lookup_km %>% rename(geometry_addr = geometry),
+            by = "id_space_lvl3_postreform") %>%
+  left_join(postreform_lookup_km %>% rename(geometry_coord = geometry),
+            by = join_by(id_space_lvl3_postreform_coord == id_space_lvl3_postreform)) %>%
+  mutate(distance_km_postreform = map2_dbl(geometry_addr, geometry_coord, \(a, b) st_distance(a, b))) %>%
+  st_drop_geometry() %>%
+  select(.row_id, distance_km_postreform)
+
+# Finalize: use coordinate polygon when it's <= 2km of the address polygon
+postreform_final_mapping <- postreform_coord_mapping %>%
+  left_join(postreform_discrepancies_distance, by = ".row_id") %>%
+  mutate(
+    id_space_lvl3_postreform_final = if_else(
+      !is.na(distance_km_postreform) & distance_km_postreform <= 2,
+      id_space_lvl3_postreform_coord,
+      id_space_lvl3_postreform
+    )
+  ) %>%
+  left_join(
+    postreform_lookup %>% st_drop_geometry() %>%
+      select(id_space_lvl3_postreform, final_origin = postreform_origin_area),
+    by = join_by(id_space_lvl3_postreform_final == id_space_lvl3_postreform)
+  ) %>%
+  left_join(
+    postreform_lookup %>% st_drop_geometry() %>%
+      select(id_space_lvl3_postreform, coord_origin = postreform_origin_area),
+    by = join_by(id_space_lvl3_postreform_coord == id_space_lvl3_postreform)
+  ) %>%
+  select(.row_id, id_space_lvl3_postreform_final, final_origin, coord_origin)
+
+# Filter out records finalized as pre-reform HCMC origin while geocode is actually outside HCMC
+mismatch_hcmc_only <- postreform_final_mapping %>%
+  filter(final_origin == "hcmc_prereform", !is.na(coord_origin), coord_origin != "hcmc_prereform")
+
+
+dat_polygon_finalized_2 <- dat_polygon_finalized %>%
+  left_join(
+    postreform_final_mapping %>% select(.row_id, id_space_lvl3_postreform_final),
+    by = ".row_id"
+  ) %>%
+  mutate(id_space_lvl3_postreform = coalesce(id_space_lvl3_postreform_final, id_space_lvl3_postreform)) %>%
+  left_join(
+    postreform_lookup %>% st_drop_geometry() %>%
+      select(id_space_lvl3_postreform, postreform_origin_area)
+  ) |>
+  select(-id_space_lvl3_postreform_final) %>%
+  anti_join(mismatch_hcmc_only, by = ".row_id")
+
+# sanity check
+nrow(dat_polygon_finalized_2) == (nrow(old_area_incidence_2017_2025) - nrow(mismatch_hcmc_only))
+sum(is.na(dat_polygon_finalized_2$id_space_lvl3_postreform)) == sum(
+  is.na(dat_polygon_finalized_2$new_commune_ward)
+)
+
 # Final save --------------------------------------------------------------
 data <- list(
   "hcmc_extent" = hcmc_extent,
@@ -416,12 +558,13 @@ data <- list(
   "bd_spatial_area_prereform" = old_area_lookup %>%  filter(name_1 == "Bình Dương") |> summarise(geometry = st_union(geometry)) |> st_transform(kmproj),
   "hcmc_spatial_area_prereform" = old_area_lookup %>%  filter(name_1 == "TP. Hồ Chí Minh") |> summarise(geometry = st_union(geometry)) |> st_transform(kmproj),
   "global_spatial_area" = global_spatial_area,
-  "incidence_data" = dat_address_coordinate_sim %>%
-    select(-.row_id, -id_space_lvl3_postreform_ascii, -postreform_match_method,
+  "incidence_data" = dat_polygon_finalized_2 %>%
+    select(-id_space_lvl3_postreform_ascii, -postreform_match_method,
            -address_district, -address_commune,
            -exact_mapping_key, -ascii_mapping_key,
            -coordinate_district, -coordinate_commune)
 )
+
 
 saveRDS(data, "data/data_for_analysis_gisvn.RDS")
 saveRDS(old_area_lookup %>%
@@ -431,11 +574,27 @@ saveRDS(postreform_lookup %>%
           select(-ends_with("_key")),
         "data/lookup_area_postreform.rds")
 
+# write_xlsx(
+#   dat_address_coordinate_sim %>%
+#     select(-.row_id, -id_space_lvl3_postreform_ascii, -postreform_match_method,
+#            -address_district, -address_commune,
+#            -exact_mapping_key, -ascii_mapping_key,
+#            -coordinate_district, -coordinate_commune),
+#   "data/incidence_2017_2025_w_sim.xlsx")
+
+## ------ .xlsx incidence -----------
+# The xlsx consists of the following
+# - Raw data columns
+# - Geocoded line addresses and coordinates
+# - Finalized pre-reform and post-reform commune ward assignment (between raw data vs geocoded data)
 write_xlsx(
-  dat_address_coordinate_sim %>%
+  dat_polygon_finalized_2 |>
     select(-.row_id, -id_space_lvl3_postreform_ascii, -postreform_match_method,
-           -address_district, -address_commune,
-           -exact_mapping_key, -ascii_mapping_key,
-           -coordinate_district, -coordinate_commune),
-  "data/incidence_2017_2025_w_sim.xlsx")
+                      -id_space_lvl3_address, -id_space_lvl3_coordinate,
+                      -address_district, -address_commune,
+                      -exact_mapping_key, -ascii_mapping_key,
+                      -similarity, -distance_km, -postreform_origin_area,
+                      -coordinate_district, -coordinate_commune),
+  "data/incidence_2017_2025_3areas.xlsx"
+)
 

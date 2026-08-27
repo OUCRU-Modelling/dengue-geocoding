@@ -37,7 +37,15 @@ Main workflow:
 
 -   `04_export_geocoded_*.R` export incidence data with the GPS coordinates
 
--   `05_export_geocoded_aug2025.R` extracting addresses (after 2025 merge) for geocoding, also checks against existing geocoded results to avoid duplicate geocoding.
+-   `05_generate_to_geocode_aug2025.R` extracting addresses (after 2025 merge) for geocoding, also checks against existing geocoded results to avoid duplicate geocoding.
+
+-   `06_export_geocoded_aug2025.R` export post-reform incidence data with the GPS coordinates
+
+-   `07_export_data_w_sf.R` export data bundle (`.rds`) with incidence data and lookup table for shapefiles
+
+-   `08_postreform_by_mapping.R` update post-reform commune when pre-reform was not splitted during merge
+
+-   `99_*.R` miscellaneous posthoc checks
 
 ### Data geocoding (`geocoding/`)
 
